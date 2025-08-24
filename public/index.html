@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XM8Detection - Roof Material Identification</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            padding: 40px;
+        }
+
+        .upload-section {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            text-align: center;
+            border: 3px dashed #dee2e6;
+            transition: all 0.3s ease;
+        }
+
+        .upload-section:hover {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+
+        .upload-section.dragover {
+            border-color: #667eea;
+            background: #e3f2fd;
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 4rem;
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .upload-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+
+        .upload-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .image-preview {
+            max-width: 300px;
+            max-height: 300px;
+            border-radius: 10px;
+            margin: 20px auto;
+            display: block;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 30px 0;
+        }
+
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .results {
+            display: none;
+            margin-top: 30px;
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .result-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            border-left: 5px solid #667eea;
+        }
+
+        .result-card h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+        }
+
+        .material-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .material-name {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .confidence-badge {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .confidence-high { background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%); }
+        .confidence-medium { background: linear-gradient(135deg, #f7971e 0%, #ffd200 100%); }
+        .confidence-low { background: linear-gradient(135deg, #c94b4b 0%, #4b134f 100%); }
+
+        .summary-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+        }
+
+        .summary-section h3 {
+            margin-bottom: 15px;
+            font-size: 1.4rem;
+        }
+
+        .detected-materials {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .material-tag {
+            background: rgba(255,255,255,0.2);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+        }
+
+        .recommendations {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid rgba(255,255,255,0.5);
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 5px solid #dc3545;
+        }
+
+        .metadata {
+            font-size: 0.9rem;
+            color: #6c757d;
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                padding: 20px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .results-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏠 XM8Detection</h1>
+            <p>Roof Material Identification Testing Platform</p>
+        </div>
+
+        <div class="main-content">
+            <div class="upload-section" id="uploadSection">
+                <div class="upload-icon">📸</div>
+                <h2>Upload Roof Image for Analysis</h2>
+                <p>Drag & drop an image here, or click to browse</p>
+                <br>
+                <input type="file" id="fileInput" class="file-input" accept="image/*">
+                <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+                    Choose Image
+                </button>
+                <img id="imagePreview" class="image-preview" style="display: none;">
+            </div>
+
+            <div class="loading" id="loading">
+                <div class="loading-spinner"></div>
+                <h3>Analyzing your roof image...</h3>
+                <p>This may take a few seconds</p>
+            </div>
+
+            <div class="results" id="results">
+                <div id="summarySection"></div>
+                <div class="results-grid" id="resultsGrid"></div>
+                <div id="metadata"></div>
+            </div>
+
+            <div id="errorMessage"></div>
+        </div>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const uploadSection = document.getElementById('uploadSection');
+        const imagePreview = document.getElementById('imagePreview');
+        const loading = document.getElementById('loading');
+        const results = document.getElementById('results');
+        const errorMessage = document.getElementById('errorMessage');
+
+        // Drag and drop functionality
+        uploadSection.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadSection.classList.add('dragover');
+        });
+
+        uploadSection.addEventListener('dragleave', () => {
+            uploadSection.classList.remove('dragover');
+        });
+
+        uploadSection.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadSection.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFileSelect(files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFileSelect(e.target.files[0]);
+            }
+        });
+
+        function handleFileSelect(file) {
+            // Validate file type
+            if (!file.type.startsWith('image/')) {
+                showError('Please select an image file.');
+                return;
+            }
+
+            // Validate file size (10MB max)
+            if (file.size > 10 * 1024 * 1024) {
+                showError('File size must be less than 10MB.');
+                return;
+            }
+
+            // Show preview
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                imagePreview.src = e.target.result;
+                imagePreview.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+
+            // Upload and analyze
+            analyzeImage(file);
+        }
+
+        async function analyzeImage(file) {
+            loading.style.display = 'block';
+            results.style.display = 'none';
+            errorMessage.innerHTML = '';
+
+            const formData = new FormData();
+            formData.append('image', file);
+
+            try {
+                const response = await fetch('/analyze-image', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Analysis failed');
+                }
+
+                displayResults(data);
+            } catch (error) {
+                showError('Error analyzing image: ' + error.message);
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+
+        function displayResults(data) {
+            const { analysis, summary, metadata } = data;
+
+            // Display summary
+            displaySummary(summary);
+
+            // Display detailed results
+            displayDetailedResults(analysis);
+
+            // Display metadata
+            displayMetadata(metadata);
+
+            results.style.display = 'block';
+        }
+
+        function displaySummary(summary) {
+            const summarySection = document.getElementById('summarySection');
+            
+            let materialsHtml = '';
+            if (summary.detectedMaterials.length > 0) {
+                materialsHtml = summary.detectedMaterials.map(m => 
+                    `<span class="material-tag">${m.material} (${m.confidence}%)</span>`
+                ).join('');
+            } else {
+                materialsHtml = '<span class="material-tag">No specific materials detected</span>';
+            }
+
+            let recommendationsHtml = summary.recommendations.map(r => `<p>• ${r}</p>`).join('');
+
+            summarySection.innerHTML = `
+                <div class="summary-section">
+                    <h3>🎯 Analysis Summary</h3>
+                    <p><strong>Overall Confidence:</strong> ${summary.confidence.toUpperCase()}</p>
+                    <div class="detected-materials">
+                        ${materialsHtml}
+                    </div>
+                    <div class="recommendations">
+                        <strong>Recommendations:</strong>
+                        ${recommendationsHtml}
+                    </div>
+                </div>
+            `;
+        }
+
+        function displayDetailedResults(analysis) {
+            const resultsGrid = document.getElementById('resultsGrid');
+            resultsGrid.innerHTML = '';
+
+            // Roofing Materials
+            if (analysis.roofingMaterials.length > 0) {
+                resultsGrid.appendChild(createResultCard(
+                    '🏗️ Roofing Materials',
+                    analysis.roofingMaterials,
+                    'These are the roofing materials detected by Google Vision AI:'
+                ));
+            }
+
+            // Building Elements
+            if (analysis.buildingElements.length > 0) {
+                resultsGrid.appendChild(createResultCard(
+                    '🏠 Building Elements',
+                    analysis.buildingElements,
+                    'Related building components identified:'
+                ));
+            }
+
+            // Objects
+            if (analysis.objects.length > 0) {
+                resultsGrid.appendChild(createResultCard(
+                    '🔍 Detected Objects',
+                    analysis.objects,
+                    'Objects found in the image:'
+                ));
+            }
+
+            // General Labels
+            if (analysis.generalLabels.length > 0) {
+                resultsGrid.appendChild(createResultCard(
+                    '🏷️ General Labels',
+                    analysis.generalLabels,
+                    'Additional labels detected:'
+                ));
+            }
+        }
+
+        function createResultCard(title, items, description) {
+            const card = document.createElement('div');
+            card.className = 'result-card';
+
+            let itemsHtml = items.map(item => {
+                const confidenceClass = getConfidenceClass(item.confidence);
+                const name = item.description || item.name;
+                return `
+                    <div class="material-item">
+                        <span class="material-name">${name}</span>
+                        <span class="confidence-badge ${confidenceClass}">${item.confidence}%</span>
+                    </div>
+                `;
+            }).join('');
+
+            card.innerHTML = `
+                <h3>${title}</h3>
+                <p style="margin-bottom: 15px; color: #6c757d;">${description}</p>
+                ${itemsHtml}
+            `;
+
+            return card;
+        }
+
+        function getConfidenceClass(confidence) {
+            if (confidence >= 80) return 'confidence-high';
+            if (confidence >= 60) return 'confidence-medium';
+            return 'confidence-low';
+        }
+
+        function displayMetadata(metadata) {
+            const metadataDiv = document.getElementById('metadata');
+            metadataDiv.innerHTML = `
+                <div class="metadata">
+                    <strong>📊 Analysis Details:</strong><br>
+                    File: ${metadata.filename}<br>
+                    Size: ${(metadata.fileSize / 1024).toFixed(1)} KB<br>
+                    Processed: ${new Date(metadata.processedAt).toLocaleString()}
+                </div>
+            `;
+        }
+
+        function showError(message) {
+            errorMessage.innerHTML = `
+                <div class="error">
+                    <strong>Error:</strong> ${message}
+                </div>
+            `;
+            loading.style.display = 'none';
+        }
+
+        // Initialize app
+        console.log('XM8Detection app loaded successfully!');
+    </script>
+</body>
+</html>
