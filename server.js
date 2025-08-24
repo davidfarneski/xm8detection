@@ -145,9 +145,7 @@ app.post('/analyze-image', upload.single('image'), async (req, res) => {
     code: error.code,
     status: error.status
   });
-    });
-  }
-});
+
 
 // Helper function to generate analysis summary
 function generateAnalysisSummary(results) {
