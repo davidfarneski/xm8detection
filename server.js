@@ -133,10 +133,18 @@ app.post('/analyze-image', upload.single('image'), async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error analyzing image:', error);
-    res.status(500).json({ 
-      error: 'Failed to analyze image',
-      details: error.message 
+  console.error('Error analyzing image:', error);
+  console.error('Error details:', JSON.stringify(error, null, 2));
+  console.error('Error message:', error.message);
+  console.error('Error code:', error.code);
+  console.error('Error status:', error.status);
+  
+  res.status(500).json({ 
+    error: 'Failed to analyze image',
+    details: error.message,
+    code: error.code,
+    status: error.status
+  });
     });
   }
 });
