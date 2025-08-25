@@ -607,7 +607,7 @@
         </div>
     </div>
 
-    <!-- TensorFlow.js with WORKING CDN links -->
+    <!-- TensorFlow.js and COCO-SSD Model - FIXED CDN LINKS -->
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@latest/dist/coco-ssd.min.js"></script>
 
@@ -652,34 +652,9 @@
             updateStatus('Loading TensorFlow.js model...', 'detecting');
             
             try {
-                // Wait for TensorFlow to load first
-                await new Promise((resolve) => {
-                    if (typeof tf !== 'undefined') {
-                        resolve();
-                    } else {
-                        const checkTf = setInterval(() => {
-                            if (typeof tf !== 'undefined') {
-                                clearInterval(checkTf);
-                                resolve();
-                            }
-                        }, 100);
-                    }
-                });
-
-                // Wait for COCO-SSD to load
-                await new Promise((resolve) => {
-                    if (typeof cocoSsd !== 'undefined') {
-                        resolve();
-                    } else {
-                        const checkCoco = setInterval(() => {
-                            if (typeof cocoSsd !== 'undefined') {
-                                clearInterval(checkCoco);
-                                resolve();
-                            }
-                        }, 100);
-                    }
-                });
-
+                // Wait a moment for cocoSsd to load
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                
                 // Load the COCO-SSD model
                 model = await cocoSsd.load();
                 console.log('✅ TensorFlow.js COCO-SSD model loaded');
