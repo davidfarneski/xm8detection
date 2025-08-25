@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>XM8Detection v2.0 - Professional Building Analysis</title>
+    <title>XM8 Detection - Universal Building & Contents Identification</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@latest"></script>
     <style>
         * {
             margin: 0;
@@ -12,1128 +14,688 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #2c5aa0 0%, #1e3a5f 100%);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            padding: 10px;
+            color: white;
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 800px;
             margin: 0 auto;
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
-            overflow: hidden;
+            padding: 20px;
         }
 
         .header {
-            background: linear-gradient(135deg, #1e3a5f 0%, #2c5aa0 100%);
-            color: white;
-            padding: 25px;
             text-align: center;
-            position: relative;
-        }
-
-        .version-badge {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background: rgba(255,255,255,0.2);
-            padding: 5px 10px;
-            border-radius: 12px;
-            font-size: 0.8rem;
+            margin-bottom: 30px;
         }
 
         .header h1 {
-            font-size: 2.4rem;
-            margin-bottom: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
         }
 
         .header p {
-            font-size: 1.1rem;
+            font-size: 1.2em;
             opacity: 0.9;
-            margin-bottom: 5px;
         }
 
-        .tech-stack {
-            font-size: 0.9rem;
-            opacity: 0.8;
-            font-style: italic;
-        }
-
-        .main-content {
-            padding: 25px;
-        }
-
-        /* Enhanced Camera Interface */
         .camera-container {
             position: relative;
-            background: #000;
+            background: rgba(255,255,255,0.1);
+            border-radius: 20px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            margin-bottom: 20px;
+        }
+
+        #videoContainer {
+            position: relative;
+            width: 100%;
+            max-width: 640px;
+            margin: 0 auto;
             border-radius: 15px;
             overflow: hidden;
-            margin-bottom: 25px;
-            height: 450px;
-            border: 3px solid #2c5aa0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
         }
 
-        .camera-view {
+        #video {
             width: 100%;
-            height: 100%;
-            object-fit: cover;
+            height: auto;
+            display: block;
         }
 
-        .detection-overlay {
+        #canvas {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
             pointer-events: none;
-            z-index: 10;
         }
 
-        .detection-box {
-            position: absolute;
-            border: 3px solid #00ff41;
-            border-radius: 6px;
-            box-shadow: 0 0 15px rgba(0, 255, 65, 0.7);
-            background: rgba(0, 255, 65, 0.1);
-            transition: all 0.2s ease;
-        }
-
-        .detection-label {
-            position: absolute;
-            top: -35px;
-            left: 0;
-            background: #00ff41;
-            color: #000;
-            padding: 6px 12px;
-            border-radius: 6px;
-            font-size: 13px;
-            font-weight: bold;
-            white-space: nowrap;
-            max-width: 200px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .confidence-score {
-            position: absolute;
-            top: -35px;
-            right: 0;
-            background: rgba(0, 255, 65, 0.9);
-            color: #000;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 11px;
-            font-weight: bold;
-        }
-
-        .detection-info {
-            position: absolute;
-            bottom: 10px;
-            left: 10px;
-            background: rgba(0, 0, 0, 0.8);
-            color: #00ff41;
-            padding: 10px 15px;
-            border-radius: 8px;
-            font-size: 14px;
-            display: none;
-        }
-
-        .crosshair {
+        .center-guide {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            width: 30px;
-            height: 30px;
-            border: 2px solid rgba(255, 255, 255, 0.6);
-            border-radius: 50%;
+            width: 100px;
+            height: 100px;
+            border: 2px dashed rgba(255,255,255,0.5);
+            border-radius: 10px;
             pointer-events: none;
         }
 
-        .crosshair::before {
+        .center-guide::before {
             content: '';
             position: absolute;
             top: 50%;
             left: 50%;
-            width: 10px;
-            height: 2px;
-            background: rgba(255, 255, 255, 0.8);
             transform: translate(-50%, -50%);
-        }
-
-        .crosshair::after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 2px;
-            height: 10px;
-            background: rgba(255, 255, 255, 0.8);
-            transform: translate(-50%, -50%);
-        }
-
-        /* Enhanced Camera Controls */
-        .camera-controls {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            margin: 25px 0;
-            flex-wrap: wrap;
-        }
-
-        .control-btn {
-            padding: 14px 28px;
-            border: none;
-            border-radius: 30px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-        }
-
-        .start-camera {
-            background: linear-gradient(135deg, #00c851 0%, #00a142 100%);
-            color: white;
-        }
-
-        .capture-btn {
-            background: linear-gradient(135deg, #ff4757 0%, #ff3742 100%);
-            color: white;
-        }
-
-        .capture-btn:disabled {
-            background: #6c757d;
-            cursor: not-allowed;
-            opacity: 0.6;
-        }
-
-        .stop-camera {
-            background: linear-gradient(135deg, #ffa502 0%, #ff8c00 100%);
-            color: white;
-        }
-
-        .control-btn:hover:not(:disabled) {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
-        }
-
-        /* Detection Stats */
-        .detection-stats {
-            background: #f8f9fa;
-            border-radius: 12px;
-            padding: 15px;
-            margin-bottom: 20px;
-            display: none;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-        }
-
-        .stat-item {
-            text-align: center;
-            background: white;
-            padding: 12px;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-
-        .stat-number {
-            font-size: 1.5rem;
-            font-weight: bold;
-            color: #2c5aa0;
-            margin-bottom: 5px;
-        }
-
-        .stat-label {
-            font-size: 0.9rem;
-            color: #6c757d;
-        }
-
-        /* File upload fallback */
-        .file-upload-section {
-            background: #f8f9fa;
-            border-radius: 15px;
-            padding: 25px;
-            text-align: center;
-            border: 2px dashed #dee2e6;
-            margin-bottom: 25px;
-        }
-
-        .file-input {
-            display: none;
-        }
-
-        .upload-btn {
-            background: linear-gradient(135deg, #2c5aa0 0%, #1e3a5f 100%);
-            color: white;
-            border: none;
-            padding: 14px 28px;
-            border-radius: 30px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-            transition: all 0.3s ease;
-        }
-
-        .upload-btn:hover {
-            transform: translateY(-2px);
-        }
-
-        /* Loading States */
-        .loading {
-            display: none;
-            text-align: center;
-            margin: 25px 0;
-        }
-
-        .loading-spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #2c5aa0;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255,255,255,0.7);
             border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 20px;
         }
 
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        /* Enhanced Results Section */
-        .results {
-            display: none;
-            margin-top: 25px;
-        }
-
-        .primary-result {
-            background: linear-gradient(135deg, #2c5aa0 0%, #1e3a5f 100%);
-            color: white;
-            border-radius: 15px;
-            padding: 25px;
-            margin-bottom: 25px;
+        .controls {
             text-align: center;
-        }
-
-        .primary-item {
-            font-size: 2rem;
-            font-weight: bold;
-            margin-bottom: 15px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-        }
-
-        .confidence-display {
-            font-size: 1.3rem;
-            margin-bottom: 15px;
-        }
-
-        .result-tags {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            justify-content: center;
-            margin-top: 15px;
-        }
-
-        .result-tag {
-            background: rgba(255,255,255,0.2);
-            padding: 8px 16px;
-            border-radius: 25px;
-            font-size: 0.9rem;
-            backdrop-filter: blur(5px);
-        }
-
-        .results-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-            margin-top: 20px;
-        }
-
-        .result-card {
-            background: white;
-            border-radius: 15px;
-            padding: 25px;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
-            border-left: 5px solid #2c5aa0;
-        }
-
-        .result-card h3 {
-            color: #1e3a5f;
-            margin-bottom: 15px;
-            font-size: 1.3rem;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .damage-assessment {
-            background: #fff3cd;
-            border: 1px solid #ffeaa7;
-            border-radius: 10px;
-            padding: 15px;
-            margin-top: 10px;
-        }
-
-        .damage-assessment.severe {
-            background: #f8d7da;
-            border-color: #f5c6cb;
-        }
-
-        .damage-assessment.none {
-            background: #d4edda;
-            border-color: #c3e6cb;
-        }
-
-        .xactimate-notes {
-            background: #e8f4f8;
-            border-left: 4px solid #17a2b8;
-            padding: 20px;
-            border-radius: 0 10px 10px 0;
             margin: 20px 0;
-            font-family: 'Courier New', monospace;
-            font-size: 0.9rem;
-            line-height: 1.6;
         }
 
-        .recommendations {
-            background: #f8f9fa;
+        #status {
+            font-size: 1.3em;
+            font-weight: 600;
+            margin-bottom: 15px;
+            padding: 15px;
+            background: rgba(0,0,0,0.2);
             border-radius: 10px;
-            padding: 20px;
-            margin-top: 15px;
+            min-height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
-        .recommendations ul {
-            list-style: none;
-            padding: 0;
+        #captureBtn {
+            background: linear-gradient(45deg, #22c55e, #16a34a);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.2em;
+            font-weight: 600;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(34, 197, 94, 0.4);
+            display: none;
         }
 
-        .recommendations li {
-            padding: 8px 0;
-            border-bottom: 1px solid #dee2e6;
-            position: relative;
-            padding-left: 25px;
+        #captureBtn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 7px 20px rgba(34, 197, 94, 0.6);
         }
 
-        .recommendations li:before {
-            content: "🔧";
-            position: absolute;
-            left: 0;
+        #captureBtn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
         }
 
         .error {
-            background: #f8d7da;
-            color: #721c24;
-            padding: 20px;
+            background: rgba(239, 68, 68, 0.2);
+            color: #fecaca;
+            padding: 15px;
             border-radius: 10px;
-            margin: 20px 0;
-            border-left: 5px solid #dc3545;
+            margin: 10px 0;
+            border-left: 4px solid #ef4444;
+            display: none;
         }
 
-        .status-indicator {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 12px 20px;
-            border-radius: 25px;
-            font-weight: bold;
-            z-index: 1000;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        .results {
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+            backdrop-filter: blur(10px);
+            display: none;
         }
 
-        .status-ready {
-            background: #28a745;
-            color: white;
+        .results h3 {
+            color: #22c55e;
+            margin-bottom: 15px;
+            font-size: 1.5em;
         }
 
-        .status-detecting {
-            background: #ffc107;
-            color: black;
+        .result-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
         }
 
-        .status-analyzing {
-            background: #007bff;
-            color: white;
+        .result-item {
+            background: rgba(0,0,0,0.2);
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid #22c55e;
         }
 
-        .status-error {
-            background: #dc3545;
-            color: white;
+        .result-item label {
+            font-weight: 600;
+            color: #a3e635;
+            display: block;
+            margin-bottom: 5px;
         }
 
-        /* Mobile Optimizations */
+        .result-item value {
+            font-size: 1.1em;
+            font-family: 'Courier New', monospace;
+        }
+
         @media (max-width: 768px) {
             .container {
-                margin: 5px;
-                border-radius: 15px;
-            }
-            
-            .main-content {
-                padding: 15px;
-            }
-            
-            .camera-container {
-                height: 350px;
+                padding: 10px;
             }
             
             .header h1 {
-                font-size: 1.8rem;
+                font-size: 2em;
             }
             
-            .camera-controls {
-                gap: 10px;
-            }
-            
-            .control-btn {
-                padding: 12px 20px;
-                font-size: 14px;
-            }
-            
-            .results-grid {
+            .result-grid {
                 grid-template-columns: 1fr;
             }
-
-            .primary-item {
-                font-size: 1.5rem;
-            }
         }
 
-        /* Loading animations */
-        .pulse {
-            animation: pulse 2s infinite;
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: #22c55e;
+            animation: spin 1s ease-in-out infinite;
         }
 
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-            100% { opacity: 1; }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
     </style>
 </head>
 <body>
-    <div class="status-indicator" id="statusIndicator" style="display: none;">Initializing...</div>
-    
     <div class="container">
         <div class="header">
-            <div class="version-badge">v2.0</div>
-            <h1>🏗️ XM8Detection</h1>
-            <p>Professional Building & Contents Analysis</p>
-            <div class="tech-stack">Powered by TensorFlow.js + GPT-4 Vision</div>
+            <h1>🏠 XM8 Detection</h1>
+            <p>Universal Building & Contents Identification with XACTIMATE Codes</p>
         </div>
 
-        <div class="main-content">
-            <!-- Camera Interface -->
-            <div class="camera-container" id="cameraContainer" style="display: none;">
-                <video id="cameraFeed" class="camera-view" autoplay muted playsinline></video>
-                <div class="detection-overlay" id="detectionOverlay">
-                    <div class="crosshair"></div>
-                </div>
-                <div class="detection-info" id="detectionInfo">
-                    <div>🎯 Real-time object detection active</div>
-                    <div>Point camera at building materials or contents</div>
-                </div>
+        <div class="camera-container">
+            <div id="videoContainer">
+                <video id="video" autoplay playsinline></video>
+                <canvas id="canvas"></canvas>
+                <div class="center-guide"></div>
             </div>
-
-            <!-- Detection Statistics -->
-            <div class="detection-stats" id="detectionStats">
-                <div class="stat-item">
-                    <div class="stat-number" id="objectCount">0</div>
-                    <div class="stat-label">Objects Detected</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-number" id="confidenceAvg">0%</div>
-                    <div class="stat-label">Avg Confidence</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-number" id="detectionTime">0ms</div>
-                    <div class="stat-label">Detection Speed</div>
-                </div>
+            
+            <div class="controls">
+                <div id="status">🚀 Initializing camera and AI model...</div>
+                <button id="captureBtn" onclick="captureAndAnalyze()">Analyze Object</button>
             </div>
+        </div>
 
-            <!-- Camera Controls -->
-            <div class="camera-controls">
-                <button class="control-btn start-camera" id="startCamera">
-                    📹 Start Real-Time Detection
-                </button>
-                <button class="control-btn capture-btn" id="captureBtn" disabled>
-                    📸 Analyze with GPT-4 Vision
-                </button>
-                <button class="control-btn stop-camera" id="stopCamera" style="display: none;">
-                    ⏹️ Stop Camera
-                </button>
-            </div>
+        <div id="error" class="error"></div>
 
-            <!-- File Upload Fallback -->
-            <div class="file-upload-section" id="fileUploadSection">
-                <h3>📱 No camera access? Upload an image instead</h3>
-                <p>Choose an image of building materials, appliances, or contents</p>
-                <br>
-                <input type="file" id="fileInput" class="file-input" accept="image/*">
-                <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
-                    📁 Choose Image File
-                </button>
-            </div>
-
-            <!-- Loading States -->
-            <div class="loading" id="loading">
-                <div class="loading-spinner"></div>
-                <h3 id="loadingText">🧠 Analyzing with GPT-4 Vision...</h3>
-                <p>Professional building and contents analysis in progress</p>
-            </div>
-
-            <!-- Results Section -->
-            <div class="results" id="results">
-                <div id="primaryResult"></div>
-                <div class="results-grid" id="resultsGrid"></div>
-            </div>
-
-            <div id="errorMessage"></div>
+        <div id="results" class="results">
+            <h3>🎯 Detection Results</h3>
+            <div id="resultsContent" class="result-grid"></div>
         </div>
     </div>
 
-    <!-- TensorFlow.js and COCO-SSD Model - FIXED CDN LINKS -->
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@latest/dist/coco-ssd.min.js"></script>
-
     <script>
         // Global variables
-        let cameraStream = null;
-        let model = null;
-        let detectionActive = false;
-        let detectionInterval = null;
-        let currentDetections = [];
-        
-        // Performance tracking object
-        let performanceStats = {
-            objectCount: 0,
-            averageConfidence: 0,
-            detectionTime: 0
-        };
+        let model;
+        let video;
+        let canvas;
+        let ctx;
+        let isCapturing = false;
 
-        // DOM elements
-        const cameraContainer = document.getElementById('cameraContainer');
-        const cameraFeed = document.getElementById('cameraFeed');
-        const detectionOverlay = document.getElementById('detectionOverlay');
-        const detectionInfo = document.getElementById('detectionInfo');
-        const statsContainer = document.getElementById('detectionStats');
-        const startCameraBtn = document.getElementById('startCamera');
-        const captureBtn = document.getElementById('captureBtn');
-        const stopCameraBtn = document.getElementById('stopCamera');
-        const fileInput = document.getElementById('fileInput');
-        const loading = document.getElementById('loading');
-        const results = document.getElementById('results');
-        const errorMessage = document.getElementById('errorMessage');
-        const statusIndicator = document.getElementById('statusIndicator');
+        // Enhanced stabilization variables
+        let stableDetections = [];
+        let frameCount = 0;
+        let lastStableBox = null;
+        const STABILITY_THRESHOLD = 8;
+        const DETECTION_CONFIDENCE = 0.4;
+        const BOX_SMOOTHING = 0.7;
 
-        // Event listeners
-        startCameraBtn.addEventListener('click', initializeCamera);
-        stopCameraBtn.addEventListener('click', stopCamera);
-        captureBtn.addEventListener('click', captureAndAnalyze);
-        fileInput.addEventListener('change', handleFileUpload);
+        // Initialize the app
+        async function init() {
+            video = document.getElementById('video');
+            canvas = document.getElementById('canvas');
+            ctx = canvas.getContext('2d');
 
-        // Initialize the application
-        async function initializeApp() {
-            updateStatus('Loading TensorFlow.js model...', 'detecting');
+            // Initialize camera
+            const cameraSuccess = await initializeCamera();
+            if (!cameraSuccess) return;
+
+            // Load model
+            await loadModel();
             
-            try {
-                // Wait a moment for cocoSsd to load
-                await new Promise(resolve => setTimeout(resolve, 2000));
-                
-                // Load the COCO-SSD model
-                model = await cocoSsd.load();
-                console.log('✅ TensorFlow.js COCO-SSD model loaded');
-                updateStatus('Model loaded - Ready!', 'ready');
-            } catch (error) {
-                console.error('❌ Error loading model:', error);
-                showError('Failed to load AI model. Please refresh the page.');
-                updateStatus('Model load failed', 'error');
-            }
+            // Start detection loop
+            detectObjects();
+            setInterval(detectObjects, 100); // 10 FPS detection
         }
 
-        // Initialize camera and start real-time detection
         async function initializeCamera() {
-            if (!model) {
-                showError('AI model not loaded yet. Please wait and try again.');
-                return;
-            }
-
+            const statusEl = document.getElementById('status');
+            const errorEl = document.getElementById('error');
+            
             try {
-                updateStatus('Starting camera...', 'detecting');
+                statusEl.textContent = '📷 Starting camera...';
+                errorEl.style.display = 'none';
                 
-                const constraints = {
-                    video: {
-                        facingMode: 'environment', // Back camera on mobile
+                // Request camera access with better settings
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { 
+                        facingMode: 'environment',
                         width: { ideal: 1280 },
                         height: { ideal: 720 }
                     }
-                };
-
-                cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
-                cameraFeed.srcObject = cameraStream;
-                
-                // Wait for video to be ready
-                await new Promise(resolve => {
-                    cameraFeed.onloadedmetadata = resolve;
                 });
-
-                // Update UI
-                cameraContainer.style.display = 'block';
-                statsContainer.style.display = 'grid';
-                detectionInfo.style.display = 'block';
-                startCameraBtn.style.display = 'none';
-                stopCameraBtn.style.display = 'inline-flex';
-                captureBtn.disabled = false;
                 
-                // Start real-time detection
-                startRealTimeDetection();
+                video.srcObject = stream;
+                video.onloadeddata = () => {
+                    statusEl.textContent = '🤖 Loading AI model...';
+                    // Set canvas size to match video
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                };
                 
-                updateStatus('Real-time detection active', 'detecting');
+                return true;
                 
             } catch (error) {
-                console.error('❌ Camera error:', error);
-                showError('Could not access camera. Please check permissions or use file upload.');
-                updateStatus('Camera error', 'error');
-            }
-        }
-
-        // Start real-time object detection
-        function startRealTimeDetection() {
-            detectionActive = true;
-            
-            const detectObjects = async () => {
-                if (!detectionActive || !model || !cameraFeed.videoWidth) {
-                    return;
-                }
-
-                const startTime = performance.now();
+                console.error('Camera initialization failed:', error);
                 
-                try {
-                    // Run object detection
-                    const predictions = await model.detect(cameraFeed);
-                    
-                    const endTime = performance.now();
-                    const detectionTime = Math.round(endTime - startTime);
-                    
-                    // Update detections
-                    currentDetections = predictions;
-                    updateDetectionOverlay(predictions);
-                    updatePerformanceStats(predictions, detectionTime);
-                    
-                } catch (error) {
-                    console.error('Detection error:', error);
-                }
-                
-                // Continue detection loop
-                if (detectionActive) {
-                    requestAnimationFrame(detectObjects);
-                }
-            };
-            
-            detectObjects();
-        }
-
-        // Update detection overlay with bounding boxes
-        function updateDetectionOverlay(predictions) {
-            // Clear previous detections
-            const existingBoxes = detectionOverlay.querySelectorAll('.detection-box');
-            existingBoxes.forEach(box => box.remove());
-            
-            if (predictions.length === 0) return;
-            
-            // Get video dimensions and scale factors
-            const videoRect = cameraFeed.getBoundingClientRect();
-            const scaleX = videoRect.width / cameraFeed.videoWidth;
-            const scaleY = videoRect.height / cameraFeed.videoHeight;
-            
-            predictions.forEach((prediction, index) => {
-                const [x, y, width, height] = prediction.bbox;
-                const confidence = Math.round(prediction.score * 100);
-                
-                // Create detection box
-                const box = document.createElement('div');
-                box.className = 'detection-box';
-                box.style.left = (x * scaleX) + 'px';
-                box.style.top = (y * scaleY) + 'px';
-                box.style.width = (width * scaleX) + 'px';
-                box.style.height = (height * scaleY) + 'px';
-                
-                // Create label
-                const label = document.createElement('div');
-                label.className = 'detection-label';
-                label.textContent = prediction.class;
-                box.appendChild(label);
-                
-                // Create confidence score
-                const confidenceScore = document.createElement('div');
-                confidenceScore.className = 'confidence-score';
-                confidenceScore.textContent = confidence + '%';
-                box.appendChild(confidenceScore);
-                
-                // Color coding based on confidence
-                if (confidence > 80) {
-                    box.style.borderColor = '#00ff41';
-                    label.style.backgroundColor = '#00ff41';
-                } else if (confidence > 60) {
-                    box.style.borderColor = '#ffa502';
-                    label.style.backgroundColor = '#ffa502';
+                let errorMessage = 'Camera Error: ';
+                if (error.name === 'NotAllowedError') {
+                    errorMessage += 'Camera access denied. Please allow camera permission and refresh.';
+                } else if (error.name === 'NotFoundError') {
+                    errorMessage += 'No camera found. Please check your device.';
+                } else if (error.name === 'NotReadableError') {
+                    errorMessage += 'Camera is in use by another app. Please close other apps and try again.';
                 } else {
-                    box.style.borderColor = '#ff4757';
-                    label.style.backgroundColor = '#ff4757';
+                    errorMessage += error.message;
                 }
                 
-                detectionOverlay.appendChild(box);
-            });
-        }
-
-        // Update performance statistics
-        function updatePerformanceStats(predictions, detectionTime) {
-            const objectCount = predictions.length;
-            const avgConfidence = objectCount > 0 ? 
-                Math.round(predictions.reduce((sum, p) => sum + p.score, 0) / objectCount * 100) : 0;
+                statusEl.textContent = 'Camera setup failed';
+                errorEl.textContent = errorMessage;
+                errorEl.style.display = 'block';
                 
-            performanceStats.objectCount = objectCount;
-            performanceStats.averageConfidence = avgConfidence;
-            performanceStats.detectionTime = detectionTime;
-            
-            // Update UI
-            document.getElementById('objectCount').textContent = objectCount;
-            document.getElementById('confidenceAvg').textContent = avgConfidence + '%';
-            document.getElementById('detectionTime').textContent = detectionTime + 'ms';
+                return false;
+            }
         }
 
-        // Stop camera and detection
-        function stopCamera() {
-            detectionActive = false;
+        async function loadModel() {
+            const statusEl = document.getElementById('status');
+            const errorEl = document.getElementById('error');
             
-            if (cameraStream) {
-                cameraStream.getTracks().forEach(track => track.stop());
-                cameraStream = null;
+            try {
+                statusEl.innerHTML = '🤖 Loading AI model... <div class="loading"></div>';
+                model = await cocoSsd.load();
+                statusEl.textContent = '📱 Position object in center of frame';
+                console.log('Model loaded successfully');
+            } catch (error) {
+                console.error('Model loading failed:', error);
+                statusEl.textContent = 'AI model failed to load';
+                errorEl.textContent = `Model Error: ${error.message}. Please refresh the page.`;
+                errorEl.style.display = 'block';
+            }
+        }
+
+        async function detectObjects() {
+            if (!model || isCapturing) return;
+            
+            frameCount++;
+            
+            try {
+                const predictions = await model.detect(video);
+                
+                if (predictions && predictions.length > 0) {
+                    // Filter and find the most centered object
+                    const centerX = video.videoWidth / 2;
+                    const centerY = video.videoHeight / 2;
+                    
+                    // Find object closest to center with good confidence
+                    let bestDetection = null;
+                    let minDistance = Infinity;
+                    
+                    for (const prediction of predictions) {
+                        if (prediction.score > DETECTION_CONFIDENCE) {
+                            const [x, y, width, height] = prediction.bbox;
+                            const objCenterX = x + width / 2;
+                            const objCenterY = y + height / 2;
+                            const distance = Math.sqrt(
+                                Math.pow(objCenterX - centerX, 2) + 
+                                Math.pow(objCenterY - centerY, 2)
+                            );
+                            
+                            if (distance < minDistance) {
+                                minDistance = distance;
+                                bestDetection = prediction;
+                            }
+                        }
+                    }
+                    
+                    if (bestDetection) {
+                        // Smooth the detection box if we have a previous one
+                        if (lastStableBox) {
+                            const [newX, newY, newW, newH] = bestDetection.bbox;
+                            const [oldX, oldY, oldW, oldH] = lastStableBox;
+                            
+                            bestDetection.bbox = [
+                                oldX + (newX - oldX) * BOX_SMOOTHING,
+                                oldY + (newY - oldY) * BOX_SMOOTHING,
+                                oldW + (newW - oldW) * BOX_SMOOTHING,
+                                oldH + (newH - oldH) * BOX_SMOOTHING
+                            ];
+                        }
+                        
+                        lastStableBox = bestDetection.bbox;
+                        stableDetections.push(bestDetection);
+                        
+                        // Keep only recent detections
+                        if (stableDetections.length > STABILITY_THRESHOLD) {
+                            stableDetections.shift();
+                        }
+                        
+                        drawPrediction(bestDetection);
+                        updateStatus();
+                    } else {
+                        // No good detection found
+                        stableDetections = [];
+                        lastStableBox = null;
+                        clearCanvas();
+                        document.getElementById('status').textContent = 'Position object in center of frame';
+                        document.getElementById('captureBtn').style.display = 'none';
+                    }
+                } else {
+                    // No predictions
+                    stableDetections = [];
+                    lastStableBox = null;
+                    clearCanvas();
+                    document.getElementById('status').textContent = 'Scanning for objects...';
+                    document.getElementById('captureBtn').style.display = 'none';
+                }
+            } catch (error) {
+                console.error('Detection error:', error);
+                document.getElementById('status').textContent = 'Detection error - retrying...';
+            }
+        }
+
+        function updateStatus() {
+            const statusEl = document.getElementById('status');
+            const captureBtn = document.getElementById('captureBtn');
+            
+            if (stableDetections.length >= STABILITY_THRESHOLD) {
+                statusEl.textContent = '🎯 Object locked - Ready to analyze!';
+                captureBtn.style.display = 'block';
+                captureBtn.style.backgroundColor = '#22c55e';
+            } else if (stableDetections.length > 0) {
+                const progress = Math.round((stableDetections.length / STABILITY_THRESHOLD) * 100);
+                statusEl.textContent = `🔍 Stabilizing... ${progress}%`;
+                captureBtn.style.display = 'none';
+            } else {
+                statusEl.textContent = '📱 Position object in center of frame';
+                captureBtn.style.display = 'none';
+            }
+        }
+
+        function drawPrediction(prediction) {
+            clearCanvas();
+            
+            const [x, y, width, height] = prediction.bbox;
+            const confidence = prediction.score;
+            
+            // Determine stable color based on detection quality
+            let color, status;
+            if (stableDetections.length >= STABILITY_THRESHOLD) {
+                color = '#22c55e'; // Stable green
+                status = 'READY';
+            } else if (stableDetections.length >= STABILITY_THRESHOLD * 0.6) {
+                color = '#eab308'; // Warning yellow  
+                status = 'STABILIZING';
+            } else {
+                color = '#ef4444'; // Needs adjustment red
+                status = 'CENTERING';
             }
             
-            // Reset UI
-            cameraContainer.style.display = 'none';
-            statsContainer.style.display = 'none';
-            startCameraBtn.style.display = 'inline-flex';
-            stopCameraBtn.style.display = 'none';
-            captureBtn.disabled = true;
+            ctx.strokeStyle = color;
+            ctx.fillStyle = color + '20'; // Semi-transparent fill
+            ctx.lineWidth = 3;
             
-            updateStatus('Camera stopped', 'ready');
+            // Draw filled rectangle with border
+            ctx.fillRect(x, y, width, height);
+            ctx.strokeRect(x, y, width, height);
+            
+            // Draw center crosshair
+            const centerX = x + width / 2;
+            const centerY = y + height / 2;
+            const crossSize = 20;
+            
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(centerX - crossSize, centerY);
+            ctx.lineTo(centerX + crossSize, centerY);
+            ctx.moveTo(centerX, centerY - crossSize);
+            ctx.lineTo(centerX, centerY + crossSize);
+            ctx.stroke();
+            
+            // Draw label with better visibility
+            const label = `${prediction.class} (${Math.round(confidence * 100)}%) - ${status}`;
+            const labelY = y > 40 ? y - 10 : y + height + 25;
+            
+            ctx.fillStyle = color;
+            ctx.fillRect(x, labelY - 20, ctx.measureText(label).width + 10, 25);
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 14px Arial';
+            ctx.fillText(label, x + 5, labelY - 3);
         }
 
-        // Capture image and analyze with GPT-4 Vision
+        function clearCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+
         async function captureAndAnalyze() {
-            if (!cameraStream) {
-                showError('Camera not active');
+            if (isCapturing || stableDetections.length < STABILITY_THRESHOLD) {
                 return;
             }
-
-            updateStatus('Capturing image...', 'analyzing');
-            loading.style.display = 'block';
-            results.style.display = 'none';
-            errorMessage.innerHTML = '';
+            
+            isCapturing = true;
+            const captureBtn = document.getElementById('captureBtn');
+            const statusEl = document.getElementById('status');
+            const errorEl = document.getElementById('error');
             
             try {
-                // Create canvas to capture current frame
-                const canvas = document.createElement('canvas');
-                const context = canvas.getContext('2d');
+                // Hide previous errors
+                errorEl.style.display = 'none';
                 
-                canvas.width = cameraFeed.videoWidth;
-                canvas.height = cameraFeed.videoHeight;
-                context.drawImage(cameraFeed, 0, 0);
+                // Update UI
+                captureBtn.textContent = 'Analyzing...';
+                captureBtn.disabled = true;
+                statusEl.textContent = '📸 Capturing image...';
                 
-                // Convert to blob
-                canvas.toBlob(async (blob) => {
-                    if (blob) {
-                        await analyzeImageWithGPT4(blob, 'camera-capture.jpg');
-                    }
-                }, 'image/jpeg', 0.9);
+                // Create canvas for capture
+                const captureCanvas = document.createElement('canvas');
+                const captureCtx = captureCanvas.getContext('2d');
+                
+                // Set canvas size to match video
+                captureCanvas.width = video.videoWidth;
+                captureCanvas.height = video.videoHeight;
+                
+                // Draw the current video frame
+                captureCtx.drawImage(video, 0, 0);
+                
+                // Get image data
+                const imageData = captureCanvas.toDataURL('image/jpeg', 0.8);
+                
+                // Analyze with vision
+                await analyzeWithVision(imageData);
                 
             } catch (error) {
-                console.error('❌ Capture error:', error);
-                showError('Failed to capture image');
-                updateStatus('Capture failed', 'error');
-                loading.style.display = 'none';
+                console.error('Capture error:', error);
+                statusEl.textContent = 'Capture failed - try again';
+                errorEl.textContent = `Capture Error: ${error.message}`;
+                errorEl.style.display = 'block';
+            } finally {
+                // Reset UI
+                isCapturing = false;
+                captureBtn.textContent = 'Analyze Object';
+                captureBtn.disabled = false;
+                
+                // Only show capture button if still stable
+                if (stableDetections.length >= STABILITY_THRESHOLD) {
+                    captureBtn.style.display = 'block';
+                    statusEl.textContent = '🎯 Object locked - Ready to analyze!';
+                } else {
+                    captureBtn.style.display = 'none';
+                    statusEl.textContent = '📱 Position object in center of frame';
+                }
             }
         }
 
-        // Handle file upload
-        function handleFileUpload(event) {
-            const file = event.target.files[0];
-            if (file && file.type.startsWith('image/')) {
-                analyzeImageWithGPT4(file, file.name);
-            }
-        }
-
-        // Analyze image with GPT-4 Vision
-        async function analyzeImageWithGPT4(imageData, filename) {
-            loading.style.display = 'block';
-            document.getElementById('loadingText').textContent = '🧠 Analyzing with GPT-4 Vision...';
-            updateStatus('GPT-4 Vision analyzing...', 'analyzing');
-
-            const formData = new FormData();
-            formData.append('image', imageData, filename);
-
+        async function analyzeWithVision(imageData) {
+            const statusEl = document.getElementById('status');
+            const errorEl = document.getElementById('error');
+            const resultsEl = document.getElementById('results');
+            
             try {
-                const response = await fetch('/analyze-image', {
+                statusEl.textContent = 'Analyzing with AI Vision...';
+                errorEl.style.display = 'none';
+                
+                // Convert canvas to base64
+                const base64Image = imageData.split(',')[1];
+                
+                const response = await fetch('/api/analyze-vision', {
                     method: 'POST',
-                    body: formData
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        image: base64Image,
+                        mimeType: 'image/jpeg'
+                    }),
+                    timeout: 30000
                 });
 
-                const data = await response.json();
-
                 if (!response.ok) {
-                    throw new Error(data.error || 'Analysis failed');
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
                 }
 
-                displayAnalysisResults(data);
-                updateStatus('Analysis complete', 'ready');
+                const result = await response.json();
                 
+                if (result.success && result.analysis) {
+                    statusEl.textContent = 'Analysis complete!';
+                    displayResults(result.analysis);
+                } else {
+                    throw new Error(result.error || 'Unknown analysis error');
+                }
+
             } catch (error) {
-                console.error('❌ Analysis error:', error);
-                showError('GPT-4 Vision analysis failed: ' + error.message);
-                updateStatus('Analysis failed', 'error');
-            } finally {
-                loading.style.display = 'none';
-            }
-        }
-
-        // Display analysis results from GPT-4 Vision
-        function displayAnalysisResults(data) {
-            const { analysis, metadata } = data;
-            
-            // Display primary result
-            displayPrimaryResult(analysis);
-            
-            // Display detailed analysis
-            displayDetailedAnalysis(analysis, metadata);
-            
-            results.style.display = 'block';
-        }
-
-        function displayPrimaryResult(analysis) {
-            const primaryDiv = document.getElementById('primaryResult');
-            
-            if (analysis.primaryItem) {
-                const item = analysis.primaryItem;
-                const conditionIcon = getConditionIcon(item.condition);
-                const categoryIcon = getCategoryIcon(item.category);
+                console.error('Vision analysis error:', error);
+                statusEl.textContent = 'Ready to capture';
                 
-                primaryDiv.innerHTML = `
-                    <div class="primary-result">
-                        <div class="primary-item">
-                            ${categoryIcon} ${item.name}
-                        </div>
-                        <div class="confidence-display">
-                            ${item.confidence}% Confidence • ${conditionIcon} ${item.condition}
-                        </div>
-                        <div class="result-tags">
-                            <span class="result-tag">📋 ${item.category}</span>
-                            ${item.material ? `<span class="result-tag">🔧 ${item.material}</span>` : ''}
-                            ${item.ageEstimate ? `<span class="result-tag">📅 ~${item.ageEstimate} years</span>` : ''}
-                            ${item.brandModel ? `<span class="result-tag">🏷️ ${item.brandModel}</span>` : ''}
-                        </div>
-                    </div>
-                `;
-            } else {
-                primaryDiv.innerHTML = `
-                    <div class="primary-result">
-                        <div class="primary-item">🔍 Analysis Complete</div>
-                        <div class="confidence-display">Review detailed results below</div>
-                    </div>
-                `;
+                let errorMessage = 'Analysis failed: ';
+                if (error.message.includes('timeout')) {
+                    errorMessage += 'Request timed out. Please try again.';
+                } else if (error.message.includes('network')) {
+                    errorMessage += 'Network error. Check your connection.';
+                } else if (error.message.includes('HTTP 4')) {
+                    errorMessage += 'Authentication issue. Check API key.';
+                } else if (error.message.includes('HTTP 5')) {
+                    errorMessage += 'Server error. Try again in a moment.';
+                } else {
+                    errorMessage += error.message;
+                }
+                
+                errorEl.textContent = errorMessage;
+                errorEl.style.display = 'block';
+                
+                // Show fallback basic analysis
+                displayBasicAnalysis();
             }
         }
 
-        function displayDetailedAnalysis(analysis, metadata) {
-            const resultsGrid = document.getElementById('resultsGrid');
-            resultsGrid.innerHTML = '';
-            
-            // Damage Assessment Card
-            if (analysis.damageAssessment) {
-                const damageCard = createDamageAssessmentCard(analysis.damageAssessment);
-                resultsGrid.appendChild(damageCard);
-            }
-            
-            // XACTIMATE Notes Card
-            if (analysis.xactimateNotes) {
-                const xactimateCard = createXactimateCard(analysis.xactimateNotes);
-                resultsGrid.appendChild(xactimateCard);
-            }
-            
-            // Detected Items Card
-            if (analysis.detectedItems && analysis.detectedItems.length > 0) {
-                const itemsCard = createDetectedItemsCard(analysis.detectedItems);
-                resultsGrid.appendChild(itemsCard);
-            }
-            
-            // Recommendations Card
-            if (analysis.recommendations && analysis.recommendations.length > 0) {
-                const recommendationsCard = createRecommendationsCard(analysis.recommendations);
-                resultsGrid.appendChild(recommendationsCard);
-            }
-            
-            // Metadata Card
-            const metadataCard = createMetadataCard(metadata, analysis.summary);
-            resultsGrid.appendChild(metadataCard);
-        }
-
-        function createDamageAssessmentCard(damage) {
-            const card = document.createElement('div');
-            card.className = 'result-card';
-            
-            const severityClass = damage.severity === 'none' ? 'none' : 
-                                 damage.severity === 'minor' ? '' : 'severe';
-            
-            card.innerHTML = `
-                <h3>🔍 Damage Assessment</h3>
-                <div class="damage-assessment ${severityClass}">
-                    <strong>Status:</strong> ${damage.hasDamage ? '⚠️ Damage Detected' : '✅ No Damage Found'}<br>
-                    ${damage.damageType !== 'none' ? `<strong>Type:</strong> ${damage.damageType}<br>` : ''}
-                    ${damage.severity !== 'none' ? `<strong>Severity:</strong> ${damage.severity}<br>` : ''}
-                    ${damage.description ? `<strong>Description:</strong> ${damage.description}` : ''}
-                </div>
-            `;
-            
-            return card;
-        }
-
-        function createXactimateCard(notes) {
-            const card = document.createElement('div');
-            card.className = 'result-card';
-            
-            card.innerHTML = `
-                <h3>📊 XACTIMATE Notes</h3>
-                <div class="xactimate-notes">
-                    ${notes}
-                </div>
-            `;
-            
-            return card;
-        }
-
-        function createDetectedItemsCard(items) {
-            const card = document.createElement('div');
-            card.className = 'result-card';
-            
-            let itemsHtml = items.map(item => `
-                <div style="background: #f8f9fa; padding: 12px; border-radius: 8px; margin-bottom: 8px;">
-                    <strong>${item.name}</strong> (${item.confidence}%)<br>
-                    <small>${item.description}</small>
-                </div>
-            `).join('');
-            
-            card.innerHTML = `
-                <h3>🎯 Detected Items</h3>
-                ${itemsHtml}
-            `;
-            
-            return card;
-        }
-
-        function createRecommendationsCard(recommendations) {
-            const card = document.createElement('div');
-            card.className = 'result-card';
-            
-            let recHtml = recommendations.map(rec => `<li>${rec}</li>`).join('');
-            
-            card.innerHTML = `
-                <h3>💡 Recommendations</h3>
-                <div class="recommendations">
-                    <ul>${recHtml}</ul>
-                </div>
-            `;
-            
-            return card;
-        }
-
-        function createMetadataCard(metadata, summary) {
-            const card = document.createElement('div');
-            card.className = 'result-card';
-            
-            card.innerHTML = `
-                <h3>📈 Analysis Details</h3>
-                <p><strong>Model:</strong> ${metadata.model}</p>
-                <p><strong>File:</strong> ${metadata.filename}</p>
-                <p><strong>Size:</strong> ${(metadata.fileSize / 1024).toFixed(1)} KB</p>
-                <p><strong>Processed:</strong> ${new Date(metadata.processedAt).toLocaleString()}</p>
-                ${metadata.tokensUsed ? `<p><strong>Tokens Used:</strong> ${metadata.tokensUsed}</p>` : ''}
-                ${summary ? `<p><strong>Summary:</strong> ${summary}</p>` : ''}
-            `;
-            
-            return card;
-        }
-
-        // Helper functions
-        function getConditionIcon(condition) {
-            const icons = {
-                'new': '🆕',
-                'good': '✅',
-                'fair': '⚠️',
-                'damaged': '❌',
-                'severely_damaged': '🚨'
+        function displayBasicAnalysis() {
+            const resultsEl = document.getElementById('results');
+            const basicAnalysis = {
+                material: "Material detected - needs manual verification",
+                category: "RFG",
+                removal_code: "RFG RES",
+                replacement_code: "RFG NEW", 
+                description: "Use manual identification for precise codes",
+                confidence: "Basic Detection",
+                notes: "For accurate XACTIMATE codes, improve lighting and try again"
             };
-            return icons[condition] || '❓';
-        }
-
-        function getCategoryIcon(category) {
-            const icons = {
-                'roofing': '🏠',
-                'exterior': '🚪',
-                'interior': '🛋️',
-                'appliances': '🔌',
-                'fixtures': '💡',
-                'contents': '📦'
-            };
-            return icons[category] || '🔧';
-        }
-
-        function updateStatus(message, type) {
-            statusIndicator.textContent = message;
-            statusIndicator.className = `status-indicator status-${type}`;
-            statusIndicator.style.display = 'block';
             
-            if (type === 'ready') {
-                setTimeout(() => {
-                    statusIndicator.style.display = 'none';
-                }, 3000);
+            displayResults(basicAnalysis);
+        }
+
+        function displayResults(analysis) {
+            const resultsContainer = document.getElementById('results');
+            const resultsContent = document.getElementById('resultsContent');
+            
+            if (!analysis) return;
+            
+            // Parse the analysis if it's a string
+            let data = analysis;
+            if (typeof analysis === 'string') {
+                try {
+                    data = JSON.parse(analysis);
+                } catch (e) {
+                    // If not JSON, create basic structure
+                    data = {
+                        material: analysis,
+                        category: "Unknown",
+                        removal_code: "Manual lookup needed",
+                        replacement_code: "Manual lookup needed"
+                    };
+                }
             }
+            
+            // Create results HTML
+            let resultsHTML = '';
+            
+            const fields = [
+                { key: 'material', label: 'Material Type' },
+                { key: 'category', label: 'XACTIMATE Category' },
+                { key: 'removal_code', label: 'Removal Code' },
+                { key: 'replacement_code', label: 'Replacement Code' },
+                { key: 'description', label: 'Description' },
+                { key: 'confidence', label: 'Confidence' },
+                { key: 'notes', label: 'Notes' }
+            ];
+            
+            for (const field of fields) {
+                if (data[field.key]) {
+                    resultsHTML += `
+                        <div class="result-item">
+                            <label>${field.label}:</label>
+                            <value>${data[field.key]}</value>
+                        </div>
+                    `;
+                }
+            }
+            
+            resultsContent.innerHTML = resultsHTML;
+            resultsContainer.style.display = 'block';
+            
+            // Scroll to results
+            resultsContainer.scrollIntoView({ behavior: 'smooth' });
         }
 
-        function showError(message) {
-            errorMessage.innerHTML = `
-                <div class="error">
-                    <strong>⚠️ Error:</strong> ${message}
-                </div>
-            `;
-        }
-
-        // Initialize app when page loads
-        window.addEventListener('load', initializeApp);
-        
-        // Check camera support
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-            showError('Camera not supported on this device. Please use file upload instead.');
-            startCameraBtn.style.display = 'none';
-        }
-
-        console.log('🚀 XM8Detection v2.0 loaded successfully!');
-        console.log('🧠 TensorFlow.js + GPT-4 Vision ready for professional analysis');
+        // Start the app when page loads
+        window.addEventListener('load', init);
     </script>
 </body>
 </html>
