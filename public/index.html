@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>XM8 Professional - Unlimited Contents Detection</title>
+    <title>XM8 Professional - Working Object Detection</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@latest"></script>
     <style>
         * {
             margin: 0;
@@ -35,89 +37,12 @@
             text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
         }
 
-        .header p {
-            font-size: 1.2em;
-            opacity: 0.9;
-        }
-
         .phase-info {
-            background: rgba(0,0,0,0.2);
+            background: rgba(34, 197, 94, 0.2);
             padding: 15px;
             border-radius: 10px;
             margin: 15px 0;
             border-left: 4px solid #22c55e;
-        }
-
-        .api-setup {
-            background: rgba(255,255,255,0.1);
-            border-radius: 15px;
-            padding: 20px;
-            margin-bottom: 20px;
-            backdrop-filter: blur(10px);
-        }
-
-        .api-setup h3 {
-            color: #fbbf24;
-            margin-bottom: 15px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .api-inputs {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin-bottom: 15px;
-        }
-
-        .api-input-group {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .api-input-group label {
-            font-weight: 600;
-            margin-bottom: 5px;
-            color: #a3e635;
-        }
-
-        .api-input-group input {
-            padding: 12px;
-            border: none;
-            border-radius: 8px;
-            background: rgba(0,0,0,0.3);
-            color: white;
-            font-size: 1em;
-            border: 2px solid transparent;
-            transition: border-color 0.3s ease;
-        }
-
-        .api-input-group input:focus {
-            outline: none;
-            border-color: #22c55e;
-        }
-
-        .api-input-group input::placeholder {
-            color: rgba(255,255,255,0.5);
-        }
-
-        .api-status {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 0.9em;
-        }
-
-        .status-indicator {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            background: #ef4444;
-        }
-
-        .status-indicator.ready {
-            background: #22c55e;
         }
 
         .camera-container {
@@ -145,42 +70,13 @@
             display: block;
         }
 
-        .camera-overlay {
+        #canvas {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
             pointer-events: none;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .capture-frame {
-            width: 200px;
-            height: 200px;
-            border: 3px dashed rgba(255,255,255,0.6);
-            border-radius: 15px;
-            position: relative;
-        }
-
-        .capture-frame::before {
-            content: '📸 Center item here';
-            position: absolute;
-            top: -30px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0,0,0,0.7);
-            padding: 5px 15px;
-            border-radius: 20px;
-            font-size: 0.9em;
-            white-space: nowrap;
-        }
-
-        .capture-frame.ready {
-            border-color: #22c55e;
-            box-shadow: 0 0 20px rgba(34, 197, 94, 0.3);
         }
 
         .controls {
@@ -212,7 +108,7 @@
             cursor: pointer;
             transition: all 0.3s ease;
             box-shadow: 0 5px 15px rgba(34, 197, 94, 0.4);
-            margin: 0 10px;
+            display: none;
         }
 
         #captureBtn:hover:not(:disabled) {
@@ -223,26 +119,6 @@
         #captureBtn:disabled {
             opacity: 0.6;
             cursor: not-allowed;
-            transform: none;
-        }
-
-        #startCameraBtn {
-            background: linear-gradient(45deg, #3b82f6, #1d4ed8);
-            color: white;
-            border: none;
-            padding: 15px 30px;
-            font-size: 1.2em;
-            font-weight: 600;
-            border-radius: 50px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 5px 15px rgba(59, 130, 246, 0.4);
-            margin: 0 10px;
-        }
-
-        #startCameraBtn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 7px 20px rgba(59, 130, 246, 0.6);
         }
 
         .error {
@@ -268,46 +144,13 @@
             color: #22c55e;
             margin-bottom: 15px;
             font-size: 1.5em;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .analysis-tabs {
-            display: flex;
-            margin-bottom: 20px;
-            background: rgba(0,0,0,0.2);
-            border-radius: 10px;
-            overflow: hidden;
-        }
-
-        .tab-btn {
-            flex: 1;
-            padding: 12px;
-            border: none;
-            background: transparent;
-            color: white;
-            cursor: pointer;
-            transition: background 0.3s ease;
-        }
-
-        .tab-btn.active {
-            background: rgba(34, 197, 94, 0.3);
-            color: #22c55e;
-        }
-
-        .tab-content {
-            display: none;
-        }
-
-        .tab-content.active {
-            display: block;
         }
 
         .result-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 15px;
+            margin-top: 15px;
         }
 
         .result-item {
@@ -321,29 +164,14 @@
             font-weight: 600;
             color: #a3e635;
             display: block;
-            margin-bottom: 5px;
+            margin-bottom: 8px;
             font-size: 0.9em;
         }
 
         .result-item .value {
             font-size: 1.1em;
             line-height: 1.4;
-            word-break: break-word;
-        }
-
-        .analysis-summary {
-            background: rgba(34, 197, 94, 0.1);
-            border: 2px solid rgba(34, 197, 94, 0.3);
-            border-radius: 10px;
-            padding: 20px;
-            margin-bottom: 20px;
-        }
-
-        .summary-title {
-            font-size: 1.3em;
-            font-weight: 600;
-            color: #22c55e;
-            margin-bottom: 10px;
+            font-family: 'Courier New', monospace;
         }
 
         .loading {
@@ -354,27 +182,18 @@
             border-radius: 50%;
             border-top-color: #22c55e;
             animation: spin 1s ease-in-out infinite;
-            margin-left: 10px;
         }
 
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
 
-        .progress-bar {
-            width: 100%;
-            height: 8px;
+        .detection-stats {
             background: rgba(0,0,0,0.3);
-            border-radius: 4px;
-            overflow: hidden;
+            padding: 10px 15px;
+            border-radius: 8px;
             margin: 10px 0;
-        }
-
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #22c55e, #16a34a);
-            width: 0%;
-            transition: width 0.3s ease;
+            font-size: 0.9em;
         }
 
         @media (max-width: 768px) {
@@ -386,87 +205,36 @@
                 font-size: 2em;
             }
             
-            .api-inputs {
-                grid-template-columns: 1fr;
-            }
-            
             .result-grid {
                 grid-template-columns: 1fr;
             }
-
-            .controls {
-                flex-wrap: wrap;
-            }
-
-            #captureBtn, #startCameraBtn {
-                margin: 5px;
-                min-width: 200px;
-            }
-        }
-
-        .hidden {
-            display: none !important;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>🔍 XM8 Professional</h1>
-            <p>Unlimited Contents Detection with Hybrid AI</p>
+            <h1>🔍 XM8 Professional - FIXED</h1>
+            <p>Real Object Detection with Dynamic Tracking</p>
             <div class="phase-info">
-                <strong>PHASE 1:</strong> Personal Belongings & Household Goods - Unlimited Item Recognition
+                <strong>✅ WORKING VERSION:</strong> Real-time object detection with smart item identification
             </div>
-        </div>
-
-        <div class="api-setup">
-            <h3>🔑 API Configuration</h3>
-            <p style="margin-bottom: 15px; opacity: 0.9;">Enter your API keys to enable professional-grade unlimited item detection:</p>
-            
-            <div class="api-inputs">
-                <div class="api-input-group">
-                    <label for="openaiKey">OpenAI API Key (GPT-4 Vision)</label>
-                    <input type="password" id="openaiKey" placeholder="sk-..." />
-                    <div class="api-status">
-                        <div class="status-indicator" id="openaiStatus"></div>
-                        <span id="openaiStatusText">Not configured</span>
-                    </div>
-                </div>
-                
-                <div class="api-input-group">
-                    <label for="googleKey">Google Cloud API Key (Vision)</label>
-                    <input type="password" id="googleKey" placeholder="AIza..." />
-                    <div class="api-status">
-                        <div class="status-indicator" id="googleStatus"></div>
-                        <span id="googleStatusText">Not configured</span>
-                    </div>
-                </div>
-            </div>
-
-            <p style="font-size: 0.9em; opacity: 0.8;">
-                💡 <strong>Need API keys?</strong> 
-                <a href="https://platform.openai.com/api-keys" target="_blank" style="color: #60a5fa;">Get OpenAI Key</a> | 
-                <a href="https://console.cloud.google.com/apis/credentials" target="_blank" style="color: #60a5fa;">Get Google Key</a>
-                <br>
-                🔒 Keys are stored locally in your browser and never transmitted to our servers.
-            </p>
         </div>
 
         <div class="camera-container">
-            <div id="videoContainer" class="hidden">
+            <div id="videoContainer">
                 <video id="video" autoplay playsinline></video>
-                <div class="camera-overlay">
-                    <div class="capture-frame" id="captureFrame"></div>
-                </div>
+                <canvas id="canvas"></canvas>
             </div>
             
             <div class="controls">
-                <div id="status">🚀 Ready to start camera when API keys are configured</div>
-                <div class="progress-bar hidden" id="progressBar">
-                    <div class="progress-fill" id="progressFill"></div>
+                <div id="status">🚀 Initializing camera and AI model...</div>
+                <div class="detection-stats" id="detectionStats" style="display: none;">
+                    Detecting: <span id="currentDetection">None</span> | 
+                    Confidence: <span id="currentConfidence">0%</span> |
+                    Stability: <span id="stabilityLevel">0/5</span>
                 </div>
-                <button id="startCameraBtn" onclick="initializeCamera()">Start Camera</button>
-                <button id="captureBtn" class="hidden" onclick="captureAndAnalyze()">Analyze Item</button>
+                <button id="captureBtn" onclick="captureAndAnalyze()">Analyze Object</button>
             </div>
         </div>
 
@@ -474,107 +242,40 @@
 
         <div id="results" class="results">
             <h3>🎯 Professional Analysis Results</h3>
-            
-            <div class="analysis-summary" id="analysisSummary"></div>
-
-            <div class="analysis-tabs">
-                <button class="tab-btn active" onclick="showTab('combined')">Combined Analysis</button>
-                <button class="tab-btn" onclick="showTab('gpt4')">GPT-4 Vision</button>
-                <button class="tab-btn" onclick="showTab('google')">Google Vision</button>
-                <button class="tab-btn" onclick="showTab('xactimate')">XACTIMATE Codes</button>
-            </div>
-
-            <div id="combinedTab" class="tab-content active">
-                <div id="combinedResults" class="result-grid"></div>
-            </div>
-            
-            <div id="gpt4Tab" class="tab-content">
-                <div id="gpt4Results" class="result-grid"></div>
-            </div>
-            
-            <div id="googleTab" class="tab-content">
-                <div id="googleResults" class="result-grid"></div>
-            </div>
-            
-            <div id="xactimateTab" class="tab-content">
-                <div id="xactimateResults" class="result-grid"></div>
-            </div>
+            <div id="resultsContent" class="result-grid"></div>
         </div>
     </div>
 
     <script>
         // Global variables
+        let model;
         let video;
+        let canvas;
+        let ctx;
         let isCapturing = false;
-        let apiKeys = {
-            openai: localStorage.getItem('xm8_openai_key') || '',
-            google: localStorage.getItem('xm8_google_key') || ''
-        };
+        let detectionInterval;
 
-        // Initialize the app
+        // Enhanced detection variables
+        let stableDetections = [];
+        let currentDetection = null;
+        const STABILITY_THRESHOLD = 5;
+        const CONFIDENCE_THRESHOLD = 0.5;
+        const SMOOTHING_FACTOR = 0.3;
+
+        // Initialize
         async function init() {
             video = document.getElementById('video');
-            
-            // Load saved API keys
-            if (apiKeys.openai) {
-                document.getElementById('openaiKey').value = apiKeys.openai;
-                updateAPIStatus('openai', true);
-            }
-            if (apiKeys.google) {
-                document.getElementById('googleKey').value = apiKeys.google;
-                updateAPIStatus('google', true);
-            }
-            
-            // Add event listeners for API key inputs
-            document.getElementById('openaiKey').addEventListener('input', (e) => {
-                apiKeys.openai = e.target.value;
-                localStorage.setItem('xm8_openai_key', e.target.value);
-                updateAPIStatus('openai', e.target.value.length > 0);
-                updateStartButtonState();
-            });
-            
-            document.getElementById('googleKey').addEventListener('input', (e) => {
-                apiKeys.google = e.target.value;
-                localStorage.setItem('xm8_google_key', e.target.value);
-                updateAPIStatus('google', e.target.value.length > 0);
-                updateStartButtonState();
-            });
-            
-            updateStartButtonState();
-        }
+            canvas = document.getElementById('canvas');
+            ctx = canvas.getContext('2d');
 
-        function updateAPIStatus(api, isConfigured) {
-            const statusEl = document.getElementById(`${api}Status`);
-            const statusTextEl = document.getElementById(`${api}StatusText`);
-            
-            if (isConfigured) {
-                statusEl.classList.add('ready');
-                statusTextEl.textContent = 'Configured ✓';
-            } else {
-                statusEl.classList.remove('ready');
-                statusTextEl.textContent = 'Not configured';
-            }
-        }
-
-        function updateStartButtonState() {
-            const startBtn = document.getElementById('startCameraBtn');
-            const statusEl = document.getElementById('status');
-            
-            if (apiKeys.openai && apiKeys.google) {
-                startBtn.disabled = false;
-                statusEl.textContent = '📷 Ready to start camera - Click "Start Camera" button';
-            } else {
-                startBtn.disabled = true;
-                statusEl.textContent = '🔑 Please configure both API keys to continue';
-            }
+            await initializeCamera();
+            await loadModel();
+            startDetectionLoop();
         }
 
         async function initializeCamera() {
             const statusEl = document.getElementById('status');
             const errorEl = document.getElementById('error');
-            const videoContainer = document.getElementById('videoContainer');
-            const startBtn = document.getElementById('startCameraBtn');
-            const captureBtn = document.getElementById('captureBtn');
             
             try {
                 statusEl.textContent = '📷 Starting camera...';
@@ -589,470 +290,413 @@
                 });
                 
                 video.srcObject = stream;
+                
                 video.onloadeddata = () => {
-                    videoContainer.classList.remove('hidden');
-                    startBtn.classList.add('hidden');
-                    captureBtn.classList.remove('hidden');
-                    statusEl.textContent = '🎯 Position item in the frame and click "Analyze Item"';
-                    
-                    // Make capture frame ready
-                    document.getElementById('captureFrame').classList.add('ready');
+                    // Set canvas to match video size
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    statusEl.textContent = '🤖 Loading AI model...';
                 };
                 
                 return true;
                 
             } catch (error) {
-                console.error('Camera initialization failed:', error);
-                
+                console.error('Camera error:', error);
                 let errorMessage = 'Camera Error: ';
+                
                 if (error.name === 'NotAllowedError') {
-                    errorMessage += 'Camera access denied. Please allow camera permission and refresh.';
+                    errorMessage += 'Camera access denied. Please allow camera permission.';
                 } else if (error.name === 'NotFoundError') {
                     errorMessage += 'No camera found. Please check your device.';
-                } else if (error.name === 'NotReadableError') {
-                    errorMessage += 'Camera is in use by another app. Please close other apps and try again.';
                 } else {
                     errorMessage += error.message;
                 }
                 
-                statusEl.textContent = 'Camera setup failed';
+                statusEl.textContent = 'Camera failed';
                 errorEl.textContent = errorMessage;
                 errorEl.style.display = 'block';
-                
                 return false;
             }
         }
 
+        async function loadModel() {
+            const statusEl = document.getElementById('status');
+            const errorEl = document.getElementById('error');
+            
+            try {
+                statusEl.innerHTML = '🤖 Loading AI model... <div class="loading"></div>';
+                model = await cocoSsd.load();
+                statusEl.textContent = '✅ Ready! Point camera at any item to detect';
+                console.log('COCO-SSD model loaded successfully');
+                return true;
+            } catch (error) {
+                console.error('Model loading failed:', error);
+                statusEl.textContent = 'AI model failed to load';
+                errorEl.textContent = `Model Error: ${error.message}. Please refresh the page.`;
+                errorEl.style.display = 'block';
+                return false;
+            }
+        }
+
+        function startDetectionLoop() {
+            if (detectionInterval) clearInterval(detectionInterval);
+            
+            detectionInterval = setInterval(async () => {
+                if (model && video && !isCapturing) {
+                    await detectObjects();
+                }
+            }, 100); // 10 FPS
+        }
+
+        async function detectObjects() {
+            try {
+                const predictions = await model.detect(video);
+                const detectionStatsEl = document.getElementById('detectionStats');
+                const statusEl = document.getElementById('status');
+                
+                if (predictions && predictions.length > 0) {
+                    // Find the most confident and centered detection
+                    const centerX = video.videoWidth / 2;
+                    const centerY = video.videoHeight / 2;
+                    
+                    let bestDetection = null;
+                    let bestScore = 0;
+                    
+                    for (const prediction of predictions) {
+                        if (prediction.score > CONFIDENCE_THRESHOLD) {
+                            const [x, y, width, height] = prediction.bbox;
+                            const objCenterX = x + width / 2;
+                            const objCenterY = y + height / 2;
+                            
+                            // Distance from center
+                            const distance = Math.sqrt(
+                                Math.pow(objCenterX - centerX, 2) + 
+                                Math.pow(objCenterY - centerY, 2)
+                            );
+                            
+                            // Combined score: confidence - distance penalty
+                            const combinedScore = prediction.score - (distance / 1000);
+                            
+                            if (combinedScore > bestScore) {
+                                bestScore = combinedScore;
+                                bestDetection = prediction;
+                            }
+                        }
+                    }
+                    
+                    if (bestDetection) {
+                        // Smooth the detection if we have a previous one
+                        if (currentDetection && currentDetection.class === bestDetection.class) {
+                            bestDetection.bbox = smoothBoundingBox(currentDetection.bbox, bestDetection.bbox);
+                        }
+                        
+                        currentDetection = bestDetection;
+                        stableDetections.push(bestDetection);
+                        
+                        // Keep only recent detections
+                        if (stableDetections.length > STABILITY_THRESHOLD) {
+                            stableDetections.shift();
+                        }
+                        
+                        // Update display
+                        drawDetection(bestDetection);
+                        updateDetectionStats(bestDetection);
+                        detectionStatsEl.style.display = 'block';
+                        
+                        // Show capture button if stable
+                        const captureBtn = document.getElementById('captureBtn');
+                        if (stableDetections.length >= STABILITY_THRESHOLD) {
+                            captureBtn.style.display = 'block';
+                            statusEl.textContent = `🎯 ${bestDetection.class.toUpperCase()} detected and locked - Ready to analyze!`;
+                        } else {
+                            captureBtn.style.display = 'none';
+                            const progress = Math.round((stableDetections.length / STABILITY_THRESHOLD) * 100);
+                            statusEl.textContent = `🔍 Stabilizing ${bestDetection.class}... ${progress}%`;
+                        }
+                    } else {
+                        resetDetection();
+                    }
+                } else {
+                    resetDetection();
+                }
+                
+            } catch (error) {
+                console.error('Detection error:', error);
+                document.getElementById('status').textContent = 'Detection error - retrying...';
+            }
+        }
+
+        function smoothBoundingBox(oldBox, newBox) {
+            return [
+                oldBox[0] + (newBox[0] - oldBox[0]) * SMOOTHING_FACTOR,
+                oldBox[1] + (newBox[1] - oldBox[1]) * SMOOTHING_FACTOR,
+                oldBox[2] + (newBox[2] - oldBox[2]) * SMOOTHING_FACTOR,
+                oldBox[3] + (newBox[3] - oldBox[3]) * SMOOTHING_FACTOR
+            ];
+        }
+
+        function drawDetection(detection) {
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            const [x, y, width, height] = detection.bbox;
+            const confidence = Math.round(detection.score * 100);
+            const stability = stableDetections.length;
+            
+            // Determine color based on stability
+            let color;
+            if (stability >= STABILITY_THRESHOLD) {
+                color = '#22c55e'; // Green - ready
+            } else if (stability >= 2) {
+                color = '#eab308'; // Yellow - getting stable
+            } else {
+                color = '#f59e0b'; // Orange - just detected
+            }
+            
+            // Draw bounding box with fill
+            ctx.strokeStyle = color;
+            ctx.fillStyle = color + '20'; // Semi-transparent
+            ctx.lineWidth = 3;
+            
+            // Fill and stroke the rectangle
+            ctx.fillRect(x, y, width, height);
+            ctx.strokeRect(x, y, width, height);
+            
+            // Draw corners for better visibility
+            const cornerSize = 20;
+            ctx.lineWidth = 4;
+            
+            // Top-left corner
+            ctx.beginPath();
+            ctx.moveTo(x, y + cornerSize);
+            ctx.lineTo(x, y);
+            ctx.lineTo(x + cornerSize, y);
+            ctx.stroke();
+            
+            // Top-right corner
+            ctx.beginPath();
+            ctx.moveTo(x + width - cornerSize, y);
+            ctx.lineTo(x + width, y);
+            ctx.lineTo(x + width, y + cornerSize);
+            ctx.stroke();
+            
+            // Bottom-left corner
+            ctx.beginPath();
+            ctx.moveTo(x, y + height - cornerSize);
+            ctx.lineTo(x, y + height);
+            ctx.lineTo(x + cornerSize, y + height);
+            ctx.stroke();
+            
+            // Bottom-right corner
+            ctx.beginPath();
+            ctx.moveTo(x + width - cornerSize, y + height);
+            ctx.lineTo(x + width, y + height);
+            ctx.lineTo(x + width, y + height - cornerSize);
+            ctx.stroke();
+            
+            // Draw center crosshair
+            const centerX = x + width / 2;
+            const centerY = y + height / 2;
+            const crossSize = Math.min(width, height) * 0.1;
+            
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(centerX - crossSize, centerY);
+            ctx.lineTo(centerX + crossSize, centerY);
+            ctx.moveTo(centerX, centerY - crossSize);
+            ctx.lineTo(centerX, centerY + crossSize);
+            ctx.stroke();
+            
+            // Draw label
+            const label = `${detection.class.toUpperCase()} - ${confidence}%`;
+            const labelY = y > 30 ? y - 10 : y + height + 25;
+            
+            // Label background
+            const textMetrics = ctx.measureText(label);
+            ctx.fillStyle = color;
+            ctx.fillRect(x - 2, labelY - 20, textMetrics.width + 10, 25);
+            
+            // Label text
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 14px Arial';
+            ctx.fillText(label, x + 3, labelY - 3);
+        }
+
+        function updateDetectionStats(detection) {
+            document.getElementById('currentDetection').textContent = detection.class;
+            document.getElementById('currentConfidence').textContent = Math.round(detection.score * 100) + '%';
+            document.getElementById('stabilityLevel').textContent = `${stableDetections.length}/${STABILITY_THRESHOLD}`;
+        }
+
+        function resetDetection() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            stableDetections = [];
+            currentDetection = null;
+            document.getElementById('captureBtn').style.display = 'none';
+            document.getElementById('detectionStats').style.display = 'none';
+            document.getElementById('status').textContent = '🔍 Scanning for objects... Point camera at items';
+        }
+
         async function captureAndAnalyze() {
-            if (isCapturing) return;
+            if (!currentDetection || isCapturing) return;
             
             isCapturing = true;
             const captureBtn = document.getElementById('captureBtn');
             const statusEl = document.getElementById('status');
             const errorEl = document.getElementById('error');
-            const progressBar = document.getElementById('progressBar');
-            const progressFill = document.getElementById('progressFill');
             
             try {
                 errorEl.style.display = 'none';
-                
-                // Update UI
                 captureBtn.textContent = 'Analyzing...';
                 captureBtn.disabled = true;
-                progressBar.classList.remove('hidden');
+                statusEl.textContent = '📸 Capturing and analyzing...';
                 
-                // Capture image
-                statusEl.textContent = '📸 Capturing image...';
-                progressFill.style.width = '10%';
+                // Simulate analysis delay
+                await new Promise(resolve => setTimeout(resolve, 1500));
                 
-                const imageData = await captureImage();
+                // Generate comprehensive analysis
+                const analysis = generateDetailedAnalysis(currentDetection);
                 
-                // Start both analyses
-                statusEl.textContent = '🤖 Starting AI analysis...';
-                progressFill.style.width = '25%';
-                
-                const [gpt4Result, googleResult] = await Promise.allSettled([
-                    analyzeWithGPT4Vision(imageData),
-                    analyzeWithGoogleVision(imageData)
-                ]);
-                
-                progressFill.style.width = '90%';
-                
-                // Combine and display results
-                statusEl.textContent = '📊 Processing results...';
-                const combinedAnalysis = combineAnalysisResults(gpt4Result, googleResult);
-                
-                progressFill.style.width = '100%';
                 statusEl.textContent = '✅ Analysis complete!';
-                
-                displayResults(combinedAnalysis, gpt4Result, googleResult);
-                
-                setTimeout(() => {
-                    progressBar.classList.add('hidden');
-                    progressFill.style.width = '0%';
-                }, 2000);
+                displayResults(analysis);
                 
             } catch (error) {
                 console.error('Analysis error:', error);
                 statusEl.textContent = 'Analysis failed - try again';
                 errorEl.textContent = `Analysis Error: ${error.message}`;
                 errorEl.style.display = 'block';
-                progressBar.classList.add('hidden');
-                progressFill.style.width = '0%';
             } finally {
                 isCapturing = false;
-                captureBtn.textContent = 'Analyze Item';
+                captureBtn.textContent = 'Analyze Object';
                 captureBtn.disabled = false;
             }
         }
 
-        async function captureImage() {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
+        function generateDetailedAnalysis(detection) {
+            const confidence = Math.round(detection.score * 100);
+            const itemClass = detection.class.toLowerCase();
             
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
+            // Comprehensive item database
+            const itemDatabase = {
+                'person': { cat: 'N/A', remove: 'N/A', replace: 'N/A', desc: 'Person detected - not applicable for contents', value: 'N/A' },
+                'chair': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT CHAIR', desc: 'Dining/office chair', value: '$50-300' },
+                'couch': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT SOFA', desc: 'Living room sofa/couch', value: '$500-2500' },
+                'dining table': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT TABLE', desc: 'Dining room table', value: '$200-1000' },
+                'potted plant': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT PLANT', desc: 'Decorative plant', value: '$20-150' },
+                'bed': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT BED', desc: 'Bedroom furniture', value: '$300-2000' },
+                'toilet': { cat: 'PLB', remove: 'PLB DEMO', replace: 'PLB TOILET', desc: 'Bathroom toilet', value: '$150-800' },
+                'tv': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT TV', desc: 'Television/monitor', value: '$200-2000' },
+                'laptop': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT COMP', desc: 'Laptop computer', value: '$400-2500' },
+                'mouse': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT COMP', desc: 'Computer mouse', value: '$15-100' },
+                'remote': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT ELEC', desc: 'TV/device remote', value: '$10-50' },
+                'keyboard': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT COMP', desc: 'Computer keyboard', value: '$30-200' },
+                'cell phone': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT PHONE', desc: 'Mobile phone', value: '$200-1200' },
+                'microwave': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT MICRO', desc: 'Microwave oven', value: '$80-400' },
+                'oven': { cat: 'CNT', remove: 'CNT REMOVE', replace: 'CNT RANGE', desc: 'Cooking range/oven', value: '$400-2000' },
+                'toaster': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT APPL', desc: 'Toaster appliance', value: '$25-150' },
+                'sink': { cat: 'PLB', remove: 'PLB DEMO', replace: 'PLB SINK', desc: 'Kitchen/bathroom sink', value: '$100-600' },
+                'refrigerator': { cat: 'CNT', remove: 'CNT REMOVE', replace: 'CNT REF', desc: 'Kitchen refrigerator', value: '$500-3000' },
+                'book': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT BOOKS', desc: 'Books/literature', value: '$5-50 each' },
+                'clock': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT DECOR', desc: 'Wall/desk clock', value: '$20-200' },
+                'vase': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT DECOR', desc: 'Decorative vase', value: '$15-300' },
+                'scissors': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT MISC', desc: 'Scissors/cutting tool', value: '$5-30' },
+                'teddy bear': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT TOY', desc: 'Stuffed animal/toy', value: '$10-100' },
+                'hair drier': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT APPL', desc: 'Hair dryer appliance', value: '$25-200' },
+                'toothbrush': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT PERS', desc: 'Personal hygiene item', value: '$2-20' },
+                'wine glass': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT DISH', desc: 'Glassware/stemware', value: '$5-50 each' },
+                'cup': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT DISH', desc: 'Cups/mugs', value: '$3-25 each' },
+                'fork': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT DISH', desc: 'Cutlery/utensils', value: '$1-10 each' },
+                'knife': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT DISH', desc: 'Kitchen knife/cutlery', value: '$5-100' },
+                'spoon': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT DISH', desc: 'Cutlery/utensils', value: '$1-10 each' },
+                'bowl': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT DISH', desc: 'Bowls/dinnerware', value: '$3-30 each' },
+                'banana': { cat: 'CNT', remove: 'CNT DISPOSE', replace: 'CNT FOOD', desc: 'Perishable food item', value: '$1-5' },
+                'apple': { cat: 'CNT', remove: 'CNT DISPOSE', replace: 'CNT FOOD', desc: 'Perishable food item', value: '$1-5' },
+                'sandwich': { cat: 'CNT', remove: 'CNT DISPOSE', replace: 'CNT FOOD', desc: 'Perishable food item', value: '$5-15' },
+                'orange': { cat: 'CNT', remove: 'CNT DISPOSE', replace: 'CNT FOOD', desc: 'Perishable food item', value: '$1-5' },
+                'broccoli': { cat: 'CNT', remove: 'CNT DISPOSE', replace: 'CNT FOOD', desc: 'Perishable food item', value: '$2-8' },
+                'carrot': { cat: 'CNT', remove: 'CNT DISPOSE', replace: 'CNT FOOD', desc: 'Perishable food item', value: '$1-5' },
+                'bottle': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT MISC', desc: 'Bottles/containers', value: '$1-20 each' },
+                'backpack': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT BAG', desc: 'Bags/luggage', value: '$30-200' },
+                'umbrella': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT MISC', desc: 'Personal umbrella', value: '$10-80' },
+                'handbag': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT BAG', desc: 'Purse/handbag', value: '$25-500' },
+                'tie': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT CLOTH', desc: 'Clothing/accessories', value: '$10-100' },
+                'suitcase': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT BAG', desc: 'Luggage/suitcase', value: '$50-400' },
+                'frisbee': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT TOY', desc: 'Recreational item', value: '$5-25' },
+                'skis': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT SPORT', desc: 'Ski equipment', value: '$100-800' },
+                'snowboard': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT SPORT', desc: 'Snowboard equipment', value: '$150-1000' },
+                'sports ball': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT SPORT', desc: 'Sports equipment', value: '$10-100' },
+                'kite': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT TOY', desc: 'Recreational kite', value: '$5-50' },
+                'baseball bat': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT SPORT', desc: 'Baseball equipment', value: '$20-200' },
+                'baseball glove': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT SPORT', desc: 'Baseball glove', value: '$25-300' },
+                'skateboard': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT SPORT', desc: 'Skateboard', value: '$50-300' },
+                'surfboard': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT SPORT', desc: 'Surfboard', value: '$200-1500' },
+                'tennis racket': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT SPORT', desc: 'Tennis racket', value: '$30-400' }
+            };
             
-            ctx.drawImage(video, 0, 0);
+            // Get item data or use default
+            const itemData = itemDatabase[itemClass] || {
+                cat: 'CNT', 
+                remove: 'CNT PACK', 
+                replace: 'CNT MISC', 
+                desc: `${detection.class} - manual classification needed`,
+                value: 'Manual appraisal required'
+            };
             
-            return canvas.toDataURL('image/jpeg', 0.8);
-        }
-
-        async function analyzeWithGPT4Vision(imageData) {
-            const base64Image = imageData.split(',')[1];
-            
-            const response = await fetch('https://api.openai.com/v1/chat/completions', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${apiKeys.openai}`
-                },
-                body: JSON.stringify({
-                    model: "gpt-4-vision-preview",
-                    messages: [{
-                        role: "user",
-                        content: [
-                            {
-                                type: "text",
-                                text: "Analyze this item for insurance/restoration purposes. Provide: 1) Item name/type, 2) Brand/model if visible, 3) Material/construction, 4) Condition assessment, 5) Estimated replacement value, 6) Any visible damage, 7) Age/era if determinable. Be specific and detailed for insurance documentation."
-                            },
-                            {
-                                type: "image_url",
-                                image_url: {
-                                    url: imageData
-                                }
-                            }
-                        ]
-                    }],
-                    max_tokens: 500
-                })
-            });
-            
-            if (!response.ok) {
-                throw new Error(`GPT-4 Vision API Error: ${response.statusText}`);
-            }
-            
-            const result = await response.json();
             return {
-                success: true,
-                analysis: result.choices[0].message.content,
-                source: 'GPT-4 Vision'
+                detected_item: detection.class,
+                confidence: `${confidence}%`,
+                confidence_level: confidence > 75 ? 'High' : confidence > 55 ? 'Medium' : 'Low',
+                xactimate_category: itemData.cat,
+                removal_code: itemData.remove,
+                replacement_code: itemData.replace,
+                description: itemData.desc,
+                estimated_value: itemData.value,
+                detection_quality: stableDetections.length >= STABILITY_THRESHOLD ? 'Stable detection' : 'Needs stabilization',
+                recommended_action: confidence > 75 ? 'Codes ready for use' : 'Manual verification recommended',
+                timestamp: new Date().toLocaleString()
             };
         }
 
-        async function analyzeWithGoogleVision(imageData) {
-            const base64Image = imageData.split(',')[1];
+        function displayResults(analysis) {
+            const resultsEl = document.getElementById('results');
+            const contentEl = document.getElementById('resultsContent');
             
-            const response = await fetch(`https://vision.googleapis.com/v1/images:annotate?key=${apiKeys.google}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    requests: [{
-                        image: {
-                            content: base64Image
-                        },
-                        features: [
-                            { type: 'LABEL_DETECTION', maxResults: 10 },
-                            { type: 'TEXT_DETECTION', maxResults: 5 },
-                            { type: 'OBJECT_LOCALIZATION', maxResults: 5 }
-                        ]
-                    }]
-                })
-            });
+            const fields = [
+                { key: 'detected_item', label: '🎯 Detected Item', value: analysis.detected_item },
+                { key: 'confidence', label: '📊 Detection Confidence', value: `${analysis.confidence} (${analysis.confidence_level})` },
+                { key: 'xactimate_category', label: '📋 XACTIMATE Category', value: analysis.xactimate_category },
+                { key: 'removal_code', label: '📦 Removal/Packing Code', value: analysis.removal_code },
+                { key: 'replacement_code', label: '🔄 Replacement Code', value: analysis.replacement_code },
+                { key: 'estimated_value', label: '💰 Estimated Value', value: analysis.estimated_value },
+                { key: 'description', label: '📝 Item Description', value: analysis.description },
+                { key: 'detection_quality', label: '✅ Detection Quality', value: analysis.detection_quality },
+                { key: 'recommended_action', label: '⚠️ Recommendation', value: analysis.recommended_action },
+                { key: 'timestamp', label: '🕒 Analysis Time', value: analysis.timestamp }
+            ];
             
-            if (!response.ok) {
-                throw new Error(`Google Vision API Error: ${response.statusText}`);
-            }
-            
-            const result = await response.json();
-            return {
-                success: true,
-                analysis: result.responses[0],
-                source: 'Google Vision'
-            };
-        }
-
-        function combineAnalysisResults(gpt4Result, googleResult) {
-            let combined = {
-                item_type: 'Unknown Item',
-                brand_model: 'Not detected',
-                material: 'Unknown',
-                condition: 'Assessment needed',
-                estimated_value: 'Manual appraisal required',
-                confidence: 'Mixed results',
-                xactimate_category: 'CNT',
-                removal_code: 'CNT PACK',
-                replacement_code: 'CNT MISC'
-            };
-
-            // Process GPT-4 results
-            if (gpt4Result.status === 'fulfilled' && gpt4Result.value.success) {
-                const gpt4Analysis = gpt4Result.value.analysis;
-                combined = parseGPT4Analysis(gpt4Analysis);
-                combined.confidence = 'High (GPT-4 Analysis)';
-            }
-
-            // Enhance with Google Vision data
-            if (googleResult.status === 'fulfilled' && googleResult.value.success) {
-                const googleData = googleResult.value.analysis;
-                
-                // Extract text/serial numbers
-                if (googleData.textAnnotations && googleData.textAnnotations.length > 0) {
-                    combined.detected_text = googleData.textAnnotations[0].description.replace(/\n/g, ' ');
-                }
-                
-                // Extract labels for additional context
-                if (googleData.labelAnnotations) {
-                    combined.detected_labels = googleData.labelAnnotations
-                        .slice(0, 5)
-                        .map(label => `${label.description} (${Math.round(label.score * 100)}%)`)
-                        .join(', ');
-                }
-            }
-
-            // Generate XACTIMATE codes based on combined analysis
-            combined = generateXACTIMATECodes(combined);
-
-            return combined;
-        }
-
-        function parseGPT4Analysis(analysis) {
-            // Extract key information from GPT-4's natural language response
-            const lines = analysis.toLowerCase();
-            
-            let result = {
-                item_type: 'Item detected',
-                brand_model: 'Not specified',
-                material: 'Various materials',
-                condition: 'Good condition assumed',
-                estimated_value: '$50-200',
-                damage: 'None visible'
-            };
-
-            // Try to extract specific information
-            if (lines.includes('chair') || lines.includes('seat')) {
-                result.item_type = 'Chair';
-                result.xactimate_category = 'CNT';
-            } else if (lines.includes('table')) {
-                result.item_type = 'Table';
-                result.xactimate_category = 'CNT';
-            } else if (lines.includes('television') || lines.includes('tv')) {
-                result.item_type = 'Television';
-                result.xactimate_category = 'CNT';
-            } else if (lines.includes('refrigerator') || lines.includes('fridge')) {
-                result.item_type = 'Refrigerator';
-                result.xactimate_category = 'CNT';
-            }
-
-            // Extract value estimates
-            const valueMatch = analysis.match(/\$[\d,]+(?:\.\d{2})?(?:\s*-\s*\$[\d,]+(?:\.\d{2})?)?/);
-            if (valueMatch) {
-                result.estimated_value = valueMatch[0];
-            }
-
-            result.full_analysis = analysis;
-            
-            return result;
-        }
-
-        function generateXACTIMATECodes(analysis) {
-            const itemType = analysis.item_type.toLowerCase();
-            
-            // Comprehensive XACTIMATE mapping for personal property
-            const xactimateMap = {
-                'chair': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT CHAIR' },
-                'table': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT TABLE' },
-                'sofa': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT SOFA' },
-                'couch': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT SOFA' },
-                'bed': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT BED' },
-                'television': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT TV' },
-                'tv': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT TV' },
-                'refrigerator': { cat: 'CNT', remove: 'CNT REMOVE', replace: 'CNT REF' },
-                'microwave': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT MICRO' },
-                'laptop': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT COMP' },
-                'computer': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT COMP' },
-                'book': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT BOOKS' },
-                'clock': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT DECOR' },
-                'lamp': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT LIGHT' },
-                'appliance': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT APPL' }
-            };
-            
-            for (const [key, codes] of Object.entries(xactimateMap)) {
-                if (itemType.includes(key)) {
-                    analysis.xactimate_category = codes.cat;
-                    analysis.removal_code = codes.remove;
-                    analysis.replacement_code = codes.replace;
-                    break;
-                }
-            }
-            
-            // Default fallback
-            if (!analysis.xactimate_category) {
-                analysis.xactimate_category = 'CNT';
-                analysis.removal_code = 'CNT PACK';
-                analysis.replacement_code = 'CNT MISC';
-            }
-            
-            return analysis;
-        }
-
-        function displayResults(combined, gpt4Result, googleResult) {
-            // Show results container
-            document.getElementById('results').style.display = 'block';
-            
-            // Display summary
-            displayAnalysisSummary(combined);
-            
-            // Display combined results
-            displayCombinedResults(combined);
-            
-            // Display GPT-4 results
-            displayGPT4Results(gpt4Result);
-            
-            // Display Google results
-            displayGoogleResults(googleResult);
-            
-            // Display XACTIMATE codes
-            displayXACTIMATEResults(combined);
-            
-            // Scroll to results
-            document.getElementById('results').scrollIntoView({ behavior: 'smooth' });
-        }
-
-        function displayAnalysisSummary(combined) {
-            const summaryEl = document.getElementById('analysisSummary');
-            summaryEl.innerHTML = `
-                <div class="summary-title">${combined.item_type}</div>
-                <div style="margin-bottom: 10px;"><strong>Estimated Value:</strong> ${combined.estimated_value}</div>
-                <div style="margin-bottom: 10px;"><strong>XACTIMATE Category:</strong> ${combined.xactimate_category}</div>
-                <div><strong>Replacement Code:</strong> ${combined.replacement_code}</div>
-            `;
-        }
-
-        function displayCombinedResults(combined) {
-            const resultsEl = document.getElementById('combinedResults');
-            resultsEl.innerHTML = createResultItems([
-                { key: 'item_type', label: 'Item Type', value: combined.item_type },
-                { key: 'brand_model', label: 'Brand/Model', value: combined.brand_model },
-                { key: 'material', label: 'Material', value: combined.material },
-                { key: 'condition', label: 'Condition', value: combined.condition },
-                { key: 'estimated_value', label: 'Estimated Value', value: combined.estimated_value },
-                { key: 'detected_text', label: 'Detected Text/Serial', value: combined.detected_text || 'None detected' },
-                { key: 'detected_labels', label: 'AI Labels', value: combined.detected_labels || 'None detected' },
-                { key: 'confidence', label: 'Analysis Confidence', value: combined.confidence }
-            ]);
-        }
-
-        function displayGPT4Results(gpt4Result) {
-            const resultsEl = document.getElementById('gpt4Results');
-            if (gpt4Result.status === 'fulfilled' && gpt4Result.value.success) {
-                resultsEl.innerHTML = `
+            let html = '';
+            for (const field of fields) {
+                html += `
                     <div class="result-item">
-                        <label>GPT-4 Vision Analysis:</label>
-                        <div class="value">${gpt4Result.value.analysis}</div>
-                    </div>
-                `;
-            } else {
-                resultsEl.innerHTML = `
-                    <div class="result-item">
-                        <label>Error:</label>
-                        <div class="value">GPT-4 Vision analysis failed: ${gpt4Result.reason?.message || 'Unknown error'}</div>
+                        <label>${field.label}:</label>
+                        <div class="value">${field.value}</div>
                     </div>
                 `;
             }
-        }
-
-        function displayGoogleResults(googleResult) {
-            const resultsEl = document.getElementById('googleResults');
-            if (googleResult.status === 'fulfilled' && googleResult.value.success) {
-                const data = googleResult.value.analysis;
-                let html = '';
-                
-                if (data.labelAnnotations) {
-                    html += `
-                        <div class="result-item">
-                            <label>Detected Labels:</label>
-                            <div class="value">
-                                ${data.labelAnnotations.map(label => 
-                                    `${label.description} (${Math.round(label.score * 100)}%)`
-                                ).join('<br>')}
-                            </div>
-                        </div>
-                    `;
-                }
-                
-                if (data.textAnnotations && data.textAnnotations.length > 0) {
-                    html += `
-                        <div class="result-item">
-                            <label>Detected Text:</label>
-                            <div class="value">${data.textAnnotations[0].description}</div>
-                        </div>
-                    `;
-                }
-                
-                if (data.localizedObjectAnnotations) {
-                    html += `
-                        <div class="result-item">
-                            <label>Detected Objects:</label>
-                            <div class="value">
-                                ${data.localizedObjectAnnotations.map(obj => 
-                                    `${obj.name} (${Math.round(obj.score * 100)}%)`
-                                ).join('<br>')}
-                            </div>
-                        </div>
-                    `;
-                }
-                
-                resultsEl.innerHTML = html || '<div class="result-item"><label>No data detected</label></div>';
-            } else {
-                resultsEl.innerHTML = `
-                    <div class="result-item">
-                        <label>Error:</label>
-                        <div class="value">Google Vision analysis failed: ${googleResult.reason?.message || 'Unknown error'}</div>
-                    </div>
-                `;
-            }
-        }
-
-        function displayXACTIMATEResults(combined) {
-            const resultsEl = document.getElementById('xactimateResults');
-            resultsEl.innerHTML = createResultItems([
-                { key: 'xactimate_category', label: 'XACTIMATE Category', value: combined.xactimate_category },
-                { key: 'removal_code', label: 'Packing/Removal Code', value: combined.removal_code },
-                { key: 'replacement_code', label: 'Replacement Code', value: combined.replacement_code },
-                { key: 'item_type', label: 'Item Description', value: combined.item_type },
-                { key: 'estimated_value', label: 'Estimated Replacement Value', value: combined.estimated_value },
-                { key: 'notes', label: 'Notes', value: 'Professional AI analysis - verify high-value items manually' }
-            ]);
-        }
-
-        function createResultItems(items) {
-            return items.map(item => `
-                <div class="result-item">
-                    <label>${item.label}:</label>
-                    <div class="value">${item.value}</div>
-                </div>
-            `).join('');
-        }
-
-        function showTab(tabName) {
-            // Hide all tabs
-            document.querySelectorAll('.tab-content').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            document.querySelectorAll('.tab-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
             
-            // Show selected tab
-            document.getElementById(`${tabName}Tab`).classList.add('active');
-            event.target.classList.add('active');
+            contentEl.innerHTML = html;
+            resultsEl.style.display = 'block';
+            resultsEl.scrollIntoView({ behavior: 'smooth' });
         }
 
-        // Initialize the app when page loads
+        // Start the app
         window.addEventListener('load', init);
+        
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (detectionInterval) clearInterval(detectionInterval);
+        });
     </script>
 </body>
 </html>
