@@ -226,8 +226,12 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🏠 XM8 Detection</h1>
-            <p>Universal Building & Contents Identification with XACTIMATE Codes</p>
+            <h1>📦 XM8 Detection - PHASE 1</h1>
+            <p>Personal Belongings & Household Goods Detection</p>
+            <div style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 10px; margin-top: 10px;">
+                <small>🏠 <strong>PHASE 1:</strong> Furniture, Electronics, Appliances (Non-Permanent Items)<br>
+                🔧 <strong>PHASE 2:</strong> Building Components (Coming Soon)</small>
+            </div>
         </div>
 
         <div class="camera-container">
@@ -597,10 +601,10 @@
             if (!detection) {
                 return {
                     material: "Unknown Object",
-                    category: "MSC",
-                    removal_code: "MSC DEMO",
-                    replacement_code: "MSC INST",
-                    description: "Manual identification required",
+                    category: "CNT",
+                    removal_code: "CNT PACK",
+                    replacement_code: "CNT MISC",
+                    description: "Personal belonging - manual identification required",
                     confidence: "Low",
                     notes: "Object detected but classification uncertain"
                 };
@@ -609,163 +613,265 @@
             const objectClass = detection.class.toLowerCase();
             const confidence = Math.round(detection.score * 100);
             
-            // XACTIMATE mapping based on detected object
-            const xactimateMap = {
-                // Roofing materials
-                'roof': {
-                    material: "Asphalt Shingles",
-                    category: "RFG",
-                    removal_code: "RFG REMOVE",
-                    replacement_code: "RFG SHGL",
-                    description: "Standard architectural shingles"
-                },
-                
-                // Windows
-                'window': {
-                    material: "Vinyl Window",
-                    category: "EXT", 
-                    removal_code: "EXT DEMO",
-                    replacement_code: "EXT WIN",
-                    description: "Standard residential window"
-                },
-                
-                // Doors  
-                'door': {
-                    material: "Entry Door",
-                    category: "EXT",
-                    removal_code: "EXT DEMO", 
-                    replacement_code: "EXT DR",
-                    description: "Exterior entry door"
-                },
-                
-                // Appliances
-                'refrigerator': {
-                    material: "Refrigerator",
-                    category: "CNT",
-                    removal_code: "CNT DEMO",
-                    replacement_code: "CNT REF", 
-                    description: "Standard residential refrigerator"
-                },
-                
-                'oven': {
-                    material: "Range/Oven",
-                    category: "CNT",
-                    removal_code: "CNT DEMO",
-                    replacement_code: "CNT RNG",
-                    description: "Electric/gas range with oven"
-                },
-                
-                'microwave': {
-                    material: "Microwave Oven", 
-                    category: "CNT",
-                    removal_code: "CNT DEMO",
-                    replacement_code: "CNT MICRO",
-                    description: "Countertop microwave oven"
-                },
-                
-                'sink': {
-                    material: "Kitchen Sink",
-                    category: "PLB",
-                    removal_code: "PLB DEMO", 
-                    replacement_code: "PLB SNK",
-                    description: "Standard kitchen sink"
-                },
-                
-                'toilet': {
-                    material: "Toilet",
-                    category: "PLB",
-                    removal_code: "PLB DEMO",
-                    replacement_code: "PLB TOI",
-                    description: "Standard residential toilet"
-                },
-                
-                // Furniture/Contents
+            // PHASE 1: Personal Belongings & Household Goods XACTIMATE Mapping
+            const personalBelongingsMap = {
+                // Furniture
                 'chair': {
                     material: "Chair",
-                    category: "CNT", 
-                    removal_code: "CNT REMOVE",
-                    replacement_code: "CNT FURN",
-                    description: "Residential chair"
+                    category: "CNT",
+                    removal_code: "CNT PACK", 
+                    replacement_code: "CNT CHAIR",
+                    description: "Residential chair/seating",
+                    avg_value: "$50-200"
                 },
                 
                 'couch': {
                     material: "Sofa/Couch",
                     category: "CNT",
-                    removal_code: "CNT REMOVE", 
-                    replacement_code: "CNT SOFA",
-                    description: "Living room furniture"
+                    removal_code: "CNT PACK",
+                    replacement_code: "CNT SOFA", 
+                    description: "Living room sofa",
+                    avg_value: "$800-2000"
                 },
                 
                 'bed': {
                     material: "Bed",
-                    category: "CNT",
-                    removal_code: "CNT REMOVE",
-                    replacement_code: "CNT BED", 
-                    description: "Bedroom furniture"
+                    category: "CNT", 
+                    removal_code: "CNT PACK",
+                    replacement_code: "CNT BED",
+                    description: "Bedroom furniture set",
+                    avg_value: "$400-1200"
                 },
                 
+                'dining table': {
+                    material: "Dining Table",
+                    category: "CNT",
+                    removal_code: "CNT PACK",
+                    replacement_code: "CNT TABLE",
+                    description: "Dining room table",
+                    avg_value: "$200-800"
+                },
+                
+                // Electronics & Technology
                 'tv': {
-                    material: "Television",
+                    material: "Television", 
+                    category: "CNT",
+                    removal_code: "CNT PACK",
+                    replacement_code: "CNT TV",
+                    description: "Flat screen television",
+                    avg_value: "$300-1500"
+                },
+                
+                'laptop': {
+                    material: "Laptop Computer",
+                    category: "CNT",
+                    removal_code: "CNT PACK", 
+                    replacement_code: "CNT COMP",
+                    description: "Personal computer",
+                    avg_value: "$500-2000"
+                },
+                
+                'cell phone': {
+                    material: "Mobile Phone",
+                    category: "CNT",
+                    removal_code: "CNT PACK",
+                    replacement_code: "CNT PHONE", 
+                    description: "Cellular phone",
+                    avg_value: "$200-1000"
+                },
+                
+                'remote': {
+                    material: "Remote Control",
+                    category: "CNT", 
+                    removal_code: "CNT PACK",
+                    replacement_code: "CNT ELEC",
+                    description: "Electronic remote",
+                    avg_value: "$15-50"
+                },
+                
+                'keyboard': {
+                    material: "Computer Keyboard",
+                    category: "CNT",
+                    removal_code: "CNT PACK",
+                    replacement_code: "CNT COMP",
+                    description: "Computer peripheral",
+                    avg_value: "$25-150"
+                },
+                
+                'mouse': {
+                    material: "Computer Mouse", 
+                    category: "CNT",
+                    removal_code: "CNT PACK",
+                    replacement_code: "CNT COMP",
+                    description: "Computer peripheral",
+                    avg_value: "$15-80"
+                },
+                
+                // Kitchen Appliances (Non-Permanent)
+                'microwave': {
+                    material: "Microwave Oven",
+                    category: "CNT",
+                    removal_code: "CNT PACK",
+                    replacement_code: "CNT MICRO",
+                    description: "Countertop microwave",
+                    avg_value: "$80-300"
+                },
+                
+                'toaster': {
+                    material: "Toaster",
+                    category: "CNT", 
+                    removal_code: "CNT PACK",
+                    replacement_code: "CNT APPL",
+                    description: "Small kitchen appliance",
+                    avg_value: "$25-100"
+                },
+                
+                'refrigerator': {
+                    material: "Refrigerator",
                     category: "CNT", 
                     removal_code: "CNT REMOVE",
-                    replacement_code: "CNT TV",
-                    description: "Flat screen television"
+                    replacement_code: "CNT REF",
+                    description: "Kitchen refrigerator (if portable)",
+                    avg_value: "$500-2500"
                 },
                 
-                // Building materials
-                'wall': {
-                    material: "Drywall",
-                    category: "INT",
-                    removal_code: "INT DEMO",
-                    replacement_code: "INT DRY", 
-                    description: "Interior wall system"
+                'oven': {
+                    material: "Cooking Range",
+                    category: "CNT",
+                    removal_code: "CNT REMOVE", 
+                    replacement_code: "CNT RANGE",
+                    description: "Cooking appliance (if portable)",
+                    avg_value: "$400-1500"
                 },
                 
-                'ceiling': {
-                    material: "Ceiling",
-                    category: "INT",
-                    removal_code: "INT DEMO",
-                    replacement_code: "INT CEIL",
-                    description: "Interior ceiling system" 
+                // Personal Items & Accessories  
+                'book': {
+                    material: "Books",
+                    category: "CNT",
+                    removal_code: "CNT PACK",
+                    replacement_code: "CNT BOOKS",
+                    description: "Personal books/literature", 
+                    avg_value: "$5-50 each"
                 },
                 
-                // Flooring
-                'floor': {
-                    material: "Flooring",
-                    category: "FLR",
-                    removal_code: "FLR DEMO",
-                    replacement_code: "FLR INST",
-                    description: "Residential flooring system"
+                'clock': {
+                    material: "Clock",
+                    category: "CNT",
+                    removal_code: "CNT PACK",
+                    replacement_code: "CNT DECOR",
+                    description: "Wall or table clock",
+                    avg_value: "$20-200"
+                },
+                
+                'vase': {
+                    material: "Decorative Vase", 
+                    category: "CNT",
+                    removal_code: "CNT PACK",
+                    replacement_code: "CNT DECOR",
+                    description: "Home decor item",
+                    avg_value: "$15-150"
+                },
+                
+                'scissors': {
+                    material: "Scissors",
+                    category: "CNT",
+                    removal_code: "CNT PACK",
+                    replacement_code: "CNT MISC",
+                    description: "Personal tool/supply",
+                    avg_value: "$5-25"
+                },
+                
+                'teddy bear': {
+                    material: "Stuffed Animal",
+                    category: "CNT", 
+                    removal_code: "CNT PACK",
+                    replacement_code: "CNT TOY",
+                    description: "Children's toy",
+                    avg_value: "$10-50"
+                },
+                
+                'hair drier': {
+                    material: "Hair Dryer",
+                    category: "CNT",
+                    removal_code: "CNT PACK", 
+                    replacement_code: "CNT APPL",
+                    description: "Personal care appliance",
+                    avg_value: "$25-150"
+                },
+                
+                'toothbrush': {
+                    material: "Toothbrush",
+                    category: "CNT",
+                    removal_code: "CNT PACK",
+                    replacement_code: "CNT PERS",
+                    description: "Personal hygiene item", 
+                    avg_value: "$2-15"
+                },
+                
+                // Additional common items
+                'bottle': {
+                    material: "Bottle/Container",
+                    category: "CNT",
+                    removal_code: "CNT PACK",
+                    replacement_code: "CNT MISC",
+                    description: "Personal container",
+                    avg_value: "$2-20"
+                },
+                
+                'cup': {
+                    material: "Cup/Mug",
+                    category: "CNT", 
+                    removal_code: "CNT PACK",
+                    replacement_code: "CNT DISH",
+                    description: "Kitchenware",
+                    avg_value: "$5-25"
+                },
+                
+                'bowl': {
+                    material: "Bowl",
+                    category: "CNT",
+                    removal_code: "CNT PACK",
+                    replacement_code: "CNT DISH",
+                    description: "Kitchenware/dinnerware",
+                    avg_value: "$5-30"
                 }
             };
             
-            // Find best match
-            let bestMatch = null;
-            for (const [key, data] of Object.entries(xactimateMap)) {
-                if (objectClass.includes(key) || key.includes(objectClass)) {
-                    bestMatch = data;
-                    break;
+            // Find exact match first
+            let bestMatch = personalBelongingsMap[objectClass];
+            
+            // If no exact match, try partial matching
+            if (!bestMatch) {
+                for (const [key, data] of Object.entries(personalBelongingsMap)) {
+                    if (objectClass.includes(key) || key.includes(objectClass)) {
+                        bestMatch = data;
+                        break;
+                    }
                 }
             }
             
-            // Default fallback
+            // Default fallback for unrecognized personal belongings
             if (!bestMatch) {
                 bestMatch = {
                     material: `${detection.class}`,
-                    category: "MSC",
-                    removal_code: "MSC DEMO",
-                    replacement_code: "MSC INST",
-                    description: "Miscellaneous item - manual lookup recommended"
+                    category: "CNT",
+                    removal_code: "CNT PACK",
+                    replacement_code: "CNT MISC",
+                    description: "Personal belonging - manual valuation needed",
+                    avg_value: "Manual appraisal required"
                 };
             }
             
             return {
                 ...bestMatch,
-                confidence: `${confidence}% (${confidence > 70 ? 'High' : confidence > 50 ? 'Medium' : 'Low'})`,
+                confidence: `${confidence}% (${confidence > 75 ? 'High' : confidence > 55 ? 'Medium' : 'Low'})`,
                 detected_as: detection.class,
-                notes: confidence > 70 ? 
-                    "High confidence detection - codes should be accurate" : 
-                    "Lower confidence - verify codes manually for accuracy"
+                classification: "Personal Property/Contents",
+                notes: confidence > 75 ? 
+                    "High confidence - XACTIMATE codes should be accurate" : 
+                    confidence > 55 ?
+                    "Medium confidence - verify replacement value" :
+                    "Low confidence - manual verification recommended"
             };
         }
 
@@ -810,12 +916,15 @@
             let resultsHTML = '';
             
             const fields = [
-                { key: 'material', label: 'Material Type' },
+                { key: 'material', label: 'Item Type' },
+                { key: 'classification', label: 'Classification' },
                 { key: 'category', label: 'XACTIMATE Category' },
-                { key: 'removal_code', label: 'Removal Code' },
+                { key: 'removal_code', label: 'Packing/Removal Code' },
                 { key: 'replacement_code', label: 'Replacement Code' },
+                { key: 'avg_value', label: 'Typical Value Range' },
                 { key: 'description', label: 'Description' },
-                { key: 'confidence', label: 'Confidence' },
+                { key: 'confidence', label: 'Detection Confidence' },
+                { key: 'detected_as', label: 'AI Detected As' },
                 { key: 'notes', label: 'Notes' }
             ];
             
