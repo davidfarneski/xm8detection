@@ -619,8 +619,8 @@
         let detectionInterval = null;
         let currentDetections = [];
         
-        // Performance tracking (renamed to avoid conflict)
-        let statsTracker = {
+        // Performance tracking object
+        let performanceStats = {
             objectCount: 0,
             averageConfidence: 0,
             detectionTime: 0
@@ -631,7 +631,7 @@
         const cameraFeed = document.getElementById('cameraFeed');
         const detectionOverlay = document.getElementById('detectionOverlay');
         const detectionInfo = document.getElementById('detectionInfo');
-        const detectionStats = document.getElementById('detectionStats');
+        const statsContainer = document.getElementById('detectionStats');
         const startCameraBtn = document.getElementById('startCamera');
         const captureBtn = document.getElementById('captureBtn');
         const stopCameraBtn = document.getElementById('stopCamera');
@@ -691,7 +691,7 @@
 
                 // Update UI
                 cameraContainer.style.display = 'block';
-                detectionStats.style.display = 'grid';
+                statsContainer.style.display = 'grid';
                 detectionInfo.style.display = 'block';
                 startCameraBtn.style.display = 'none';
                 stopCameraBtn.style.display = 'inline-flex';
@@ -730,7 +730,7 @@
                     // Update detections
                     currentDetections = predictions;
                     updateDetectionOverlay(predictions);
-                    updateDetectionStats(predictions, detectionTime);
+                    updatePerformanceStats(predictions, detectionTime);
                     
                 } catch (error) {
                     console.error('Detection error:', error);
@@ -798,15 +798,15 @@
             });
         }
 
-        // Update detection statistics
-        function updateDetectionStats(predictions, detectionTime) {
+        // Update performance statistics
+        function updatePerformanceStats(predictions, detectionTime) {
             const objectCount = predictions.length;
             const avgConfidence = objectCount > 0 ? 
                 Math.round(predictions.reduce((sum, p) => sum + p.score, 0) / objectCount * 100) : 0;
                 
-            statsTracker.objectCount = objectCount;
-            statsTracker.averageConfidence = avgConfidence;
-            statsTracker.detectionTime = detectionTime;
+            performanceStats.objectCount = objectCount;
+            performanceStats.averageConfidence = avgConfidence;
+            performanceStats.detectionTime = detectionTime;
             
             // Update UI
             document.getElementById('objectCount').textContent = objectCount;
@@ -825,7 +825,7 @@
             
             // Reset UI
             cameraContainer.style.display = 'none';
-            detectionStats.style.display = 'none';
+            statsContainer.style.display = 'none';
             startCameraBtn.style.display = 'inline-flex';
             stopCameraBtn.style.display = 'none';
             captureBtn.disabled = true;
