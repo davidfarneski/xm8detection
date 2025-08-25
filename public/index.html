@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>XM8Detection - Building & Contents Identification</title>
+    <title>XM8Detection v2.0 - Professional Building Analysis</title>
     <style>
         * {
             margin: 0;
@@ -13,7 +13,7 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #2c5aa0 0%, #1e3a5f 100%);
             min-height: 100vh;
             padding: 10px;
         }
@@ -23,39 +23,62 @@
             margin: 0 auto;
             background: white;
             border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
             overflow: hidden;
         }
 
         .header {
-            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            background: linear-gradient(135deg, #1e3a5f 0%, #2c5aa0 100%);
             color: white;
-            padding: 20px;
+            padding: 25px;
             text-align: center;
+            position: relative;
+        }
+
+        .version-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255,255,255,0.2);
+            padding: 5px 10px;
+            border-radius: 12px;
+            font-size: 0.8rem;
         }
 
         .header h1 {
-            font-size: 2.2rem;
-            margin-bottom: 5px;
+            font-size: 2.4rem;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
         }
 
         .header p {
-            font-size: 1rem;
+            font-size: 1.1rem;
             opacity: 0.9;
+            margin-bottom: 5px;
+        }
+
+        .tech-stack {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            font-style: italic;
         }
 
         .main-content {
-            padding: 20px;
+            padding: 25px;
         }
 
-        /* Camera Interface */
+        /* Enhanced Camera Interface */
         .camera-container {
             position: relative;
             background: #000;
             border-radius: 15px;
             overflow: hidden;
-            margin-bottom: 20px;
-            height: 400px;
+            margin-bottom: 25px;
+            height: 450px;
+            border: 3px solid #2c5aa0;
         }
 
         .camera-view {
@@ -71,77 +94,105 @@
             width: 100%;
             height: 100%;
             pointer-events: none;
+            z-index: 10;
         }
 
         .detection-box {
             position: absolute;
-            border: 3px solid #00ff00;
-            border-radius: 8px;
-            box-shadow: 0 0 20px rgba(0, 255, 0, 0.6);
-            background: rgba(0, 255, 0, 0.1);
-            transition: all 0.3s ease;
-            display: none;
+            border: 3px solid #00ff41;
+            border-radius: 6px;
+            box-shadow: 0 0 15px rgba(0, 255, 65, 0.7);
+            background: rgba(0, 255, 65, 0.1);
+            transition: all 0.2s ease;
         }
 
         .detection-label {
             position: absolute;
-            top: -30px;
+            top: -35px;
             left: 0;
-            background: #00ff00;
-            color: black;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 12px;
+            background: #00ff41;
+            color: #000;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 13px;
             font-weight: bold;
             white-space: nowrap;
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
-        .center-crosshair {
+        .confidence-score {
+            position: absolute;
+            top: -35px;
+            right: 0;
+            background: rgba(0, 255, 65, 0.9);
+            color: #000;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .detection-info {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            color: #00ff41;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .crosshair {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            width: 40px;
-            height: 40px;
+            width: 30px;
+            height: 30px;
+            border: 2px solid rgba(255, 255, 255, 0.6);
+            border-radius: 50%;
             pointer-events: none;
         }
 
-        .center-crosshair::before,
-        .center-crosshair::after {
+        .crosshair::before {
             content: '';
             position: absolute;
-            background: rgba(255, 255, 255, 0.8);
-        }
-
-        .center-crosshair::before {
             top: 50%;
-            left: 20%;
-            width: 60%;
-            height: 2px;
-            transform: translateY(-50%);
-        }
-
-        .center-crosshair::after {
             left: 50%;
-            top: 20%;
-            width: 2px;
-            height: 60%;
-            transform: translateX(-50%);
+            width: 10px;
+            height: 2px;
+            background: rgba(255, 255, 255, 0.8);
+            transform: translate(-50%, -50%);
         }
 
-        /* Camera Controls */
+        .crosshair::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 2px;
+            height: 10px;
+            background: rgba(255, 255, 255, 0.8);
+            transform: translate(-50%, -50%);
+        }
+
+        /* Enhanced Camera Controls */
         .camera-controls {
             display: flex;
             justify-content: center;
             gap: 15px;
-            margin: 20px 0;
+            margin: 25px 0;
             flex-wrap: wrap;
         }
 
         .control-btn {
-            padding: 12px 24px;
+            padding: 14px 28px;
             border: none;
-            border-radius: 25px;
+            border-radius: 30px;
             font-size: 16px;
             font-weight: 600;
             cursor: pointer;
@@ -149,41 +200,74 @@
             display: flex;
             align-items: center;
             gap: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
         }
 
         .start-camera {
-            background: linear-gradient(135deg, #00c851 0%, #007e33 100%);
+            background: linear-gradient(135deg, #00c851 0%, #00a142 100%);
             color: white;
         }
 
         .capture-btn {
-            background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%);
+            background: linear-gradient(135deg, #ff4757 0%, #ff3742 100%);
             color: white;
         }
 
         .capture-btn:disabled {
-            background: #ccc;
+            background: #6c757d;
             cursor: not-allowed;
+            opacity: 0.6;
         }
 
         .stop-camera {
-            background: linear-gradient(135deg, #ffbb33 0%, #ff8800 100%);
+            background: linear-gradient(135deg, #ffa502 0%, #ff8c00 100%);
             color: white;
         }
 
         .control-btn:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        }
+
+        /* Detection Stats */
+        .detection-stats {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 20px;
+            display: none;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .stat-item {
+            text-align: center;
+            background: white;
+            padding: 12px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .stat-number {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #2c5aa0;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: #6c757d;
         }
 
         /* File upload fallback */
         .file-upload-section {
             background: #f8f9fa;
             border-radius: 15px;
-            padding: 20px;
+            padding: 25px;
             text-align: center;
             border: 2px dashed #dee2e6;
-            margin-bottom: 20px;
+            margin-bottom: 25px;
         }
 
         .file-input {
@@ -191,30 +275,37 @@
         }
 
         .upload-btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #2c5aa0 0%, #1e3a5f 100%);
             color: white;
             border: none;
-            padding: 12px 24px;
-            border-radius: 25px;
+            padding: 14px 28px;
+            border-radius: 30px;
             font-size: 16px;
+            font-weight: 600;
             cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+        }
+
+        .upload-btn:hover {
+            transform: translateY(-2px);
         }
 
         /* Loading States */
         .loading {
             display: none;
             text-align: center;
-            margin: 20px 0;
+            margin: 25px 0;
         }
 
         .loading-spinner {
             border: 4px solid #f3f3f3;
-            border-top: 4px solid #667eea;
+            border-top: 4px solid #2c5aa0;
             border-radius: 50%;
-            width: 40px;
-            height: 40px;
+            width: 50px;
+            height: 50px;
             animation: spin 1s linear infinite;
-            margin: 0 auto 15px;
+            margin: 0 auto 20px;
         }
 
         @keyframes spin {
@@ -222,115 +313,148 @@
             100% { transform: rotate(360deg); }
         }
 
-        /* Results Section */
+        /* Enhanced Results Section */
         .results {
             display: none;
-            margin-top: 20px;
+            margin-top: 25px;
         }
 
-        .primary-detection {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        .primary-result {
+            background: linear-gradient(135deg, #2c5aa0 0%, #1e3a5f 100%);
             color: white;
             border-radius: 15px;
-            padding: 20px;
-            margin-bottom: 20px;
+            padding: 25px;
+            margin-bottom: 25px;
             text-align: center;
         }
 
         .primary-item {
-            font-size: 1.8rem;
+            font-size: 2rem;
             font-weight: bold;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
         }
 
         .confidence-display {
-            font-size: 1.2rem;
-            margin-bottom: 10px;
+            font-size: 1.3rem;
+            margin-bottom: 15px;
         }
 
-        .category-tag {
-            display: inline-block;
+        .result-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 15px;
+        }
+
+        .result-tag {
             background: rgba(255,255,255,0.2);
-            padding: 5px 15px;
-            border-radius: 20px;
+            padding: 8px 16px;
+            border-radius: 25px;
             font-size: 0.9rem;
-            margin: 5px;
+            backdrop-filter: blur(5px);
         }
 
         .results-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 15px;
-            margin-top: 15px;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
         }
 
         .result-card {
             background: white;
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            border-left: 4px solid #667eea;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            border-left: 5px solid #2c5aa0;
         }
 
         .result-card h3 {
-            color: #2c3e50;
-            margin-bottom: 12px;
-            font-size: 1.1rem;
-        }
-
-        .detection-item {
-            background: #f8f9fa;
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 8px;
+            color: #1e3a5f;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
             display: flex;
-            justify-content: space-between;
             align-items: center;
+            gap: 8px;
         }
 
-        .item-name {
-            font-weight: 600;
-            color: #2c3e50;
+        .damage-assessment {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 10px;
         }
 
-        .confidence-badge {
-            background: #667eea;
-            color: white;
-            padding: 4px 12px;
-            border-radius: 15px;
-            font-size: 0.85rem;
-            font-weight: 600;
+        .damage-assessment.severe {
+            background: #f8d7da;
+            border-color: #f5c6cb;
         }
 
-        .confidence-high { background: #28a745; }
-        .confidence-medium { background: #ffc107; color: #000; }
-        .confidence-low { background: #dc3545; }
+        .damage-assessment.none {
+            background: #d4edda;
+            border-color: #c3e6cb;
+        }
+
+        .xactimate-notes {
+            background: #e8f4f8;
+            border-left: 4px solid #17a2b8;
+            padding: 20px;
+            border-radius: 0 10px 10px 0;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
 
         .recommendations {
-            background: #e8f4f8;
-            padding: 15px;
+            background: #f8f9fa;
             border-radius: 10px;
-            border-left: 4px solid #17a2b8;
+            padding: 20px;
             margin-top: 15px;
+        }
+
+        .recommendations ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .recommendations li {
+            padding: 8px 0;
+            border-bottom: 1px solid #dee2e6;
+            position: relative;
+            padding-left: 25px;
+        }
+
+        .recommendations li:before {
+            content: "🔧";
+            position: absolute;
+            left: 0;
         }
 
         .error {
             background: #f8d7da;
             color: #721c24;
-            padding: 15px;
+            padding: 20px;
             border-radius: 10px;
-            margin: 15px 0;
-            border-left: 4px solid #dc3545;
+            margin: 20px 0;
+            border-left: 5px solid #dc3545;
         }
 
         .status-indicator {
             position: fixed;
             top: 20px;
             right: 20px;
-            padding: 10px 15px;
-            border-radius: 20px;
+            padding: 12px 20px;
+            border-radius: 25px;
             font-weight: bold;
             z-index: 1000;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
         }
 
         .status-ready {
@@ -341,6 +465,11 @@
         .status-detecting {
             background: #ffc107;
             color: black;
+        }
+
+        .status-analyzing {
+            background: #007bff;
+            color: white;
         }
 
         .status-error {
@@ -360,7 +489,7 @@
             }
             
             .camera-container {
-                height: 300px;
+                height: 350px;
             }
             
             .header h1 {
@@ -372,44 +501,78 @@
             }
             
             .control-btn {
-                padding: 10px 16px;
+                padding: 12px 20px;
                 font-size: 14px;
             }
             
             .results-grid {
                 grid-template-columns: 1fr;
             }
+
+            .primary-item {
+                font-size: 1.5rem;
+            }
+        }
+
+        /* Loading animations */
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
         }
     </style>
 </head>
 <body>
-    <div class="status-indicator" id="statusIndicator" style="display: none;">Ready</div>
+    <div class="status-indicator" id="statusIndicator" style="display: none;">Initializing...</div>
     
     <div class="container">
         <div class="header">
-            <h1>🎯 XM8Detection</h1>
-            <p>Building & Contents Identification System</p>
+            <div class="version-badge">v2.0</div>
+            <h1>🏗️ XM8Detection</h1>
+            <p>Professional Building & Contents Analysis</p>
+            <div class="tech-stack">Powered by TensorFlow.js + GPT-4 Vision</div>
         </div>
 
         <div class="main-content">
             <!-- Camera Interface -->
             <div class="camera-container" id="cameraContainer" style="display: none;">
                 <video id="cameraFeed" class="camera-view" autoplay muted playsinline></video>
-                <div class="detection-overlay">
-                    <div class="center-crosshair"></div>
-                    <div class="detection-box" id="detectionBox">
-                        <div class="detection-label" id="detectionLabel">Scanning...</div>
-                    </div>
+                <div class="detection-overlay" id="detectionOverlay">
+                    <div class="crosshair"></div>
+                </div>
+                <div class="detection-info" id="detectionInfo">
+                    <div>🎯 Real-time object detection active</div>
+                    <div>Point camera at building materials or contents</div>
+                </div>
+            </div>
+
+            <!-- Detection Statistics -->
+            <div class="detection-stats" id="detectionStats">
+                <div class="stat-item">
+                    <div class="stat-number" id="objectCount">0</div>
+                    <div class="stat-label">Objects Detected</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="confidenceAvg">0%</div>
+                    <div class="stat-label">Avg Confidence</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="detectionTime">0ms</div>
+                    <div class="stat-label">Detection Speed</div>
                 </div>
             </div>
 
             <!-- Camera Controls -->
             <div class="camera-controls">
                 <button class="control-btn start-camera" id="startCamera">
-                    📹 Start Camera
+                    📹 Start Real-Time Detection
                 </button>
                 <button class="control-btn capture-btn" id="captureBtn" disabled>
-                    📸 Capture & Analyze
+                    📸 Analyze with GPT-4 Vision
                 </button>
                 <button class="control-btn stop-camera" id="stopCamera" style="display: none;">
                     ⏹️ Stop Camera
@@ -418,8 +581,8 @@
 
             <!-- File Upload Fallback -->
             <div class="file-upload-section" id="fileUploadSection">
-                <h3>📱 Can't access camera? Upload an image instead</h3>
-                <p>Choose an image file from your device</p>
+                <h3>📱 No camera access? Upload an image instead</h3>
+                <p>Choose an image of building materials, appliances, or contents</p>
                 <br>
                 <input type="file" id="fileInput" class="file-input" accept="image/*">
                 <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
@@ -430,54 +593,89 @@
             <!-- Loading States -->
             <div class="loading" id="loading">
                 <div class="loading-spinner"></div>
-                <h3>🔍 Analyzing detected object...</h3>
-                <p>Processing with Google Vision AI</p>
+                <h3 id="loadingText">🧠 Analyzing with GPT-4 Vision...</h3>
+                <p>Professional building and contents analysis in progress</p>
             </div>
 
             <!-- Results Section -->
             <div class="results" id="results">
-                <div id="primaryDetection"></div>
+                <div id="primaryResult"></div>
                 <div class="results-grid" id="resultsGrid"></div>
-                <div id="recommendations"></div>
             </div>
 
             <div id="errorMessage"></div>
         </div>
     </div>
 
+    <!-- TensorFlow.js and COCO-SSD Model -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tensorflow/4.10.0/tf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tensorflow-models-coco-ssd/2.2.2/coco-ssd.min.js"></script>
+
     <script>
         // Global variables
         let cameraStream = null;
-        let isDetecting = false;
+        let model = null;
+        let detectionActive = false;
         let detectionInterval = null;
+        let currentDetections = [];
+        
+        // Performance tracking
+        let detectionStats = {
+            objectCount: 0,
+            averageConfidence: 0,
+            detectionTime: 0
+        };
 
         // DOM elements
         const cameraContainer = document.getElementById('cameraContainer');
         const cameraFeed = document.getElementById('cameraFeed');
+        const detectionOverlay = document.getElementById('detectionOverlay');
+        const detectionInfo = document.getElementById('detectionInfo');
+        const detectionStats = document.getElementById('detectionStats');
         const startCameraBtn = document.getElementById('startCamera');
         const captureBtn = document.getElementById('captureBtn');
         const stopCameraBtn = document.getElementById('stopCamera');
-        const detectionBox = document.getElementById('detectionBox');
-        const detectionLabel = document.getElementById('detectionLabel');
         const fileInput = document.getElementById('fileInput');
         const loading = document.getElementById('loading');
         const results = document.getElementById('results');
         const errorMessage = document.getElementById('errorMessage');
         const statusIndicator = document.getElementById('statusIndicator');
 
-        // Camera functionality
-        startCameraBtn.addEventListener('click', startCamera);
+        // Event listeners
+        startCameraBtn.addEventListener('click', initializeCamera);
         stopCameraBtn.addEventListener('click', stopCamera);
-        captureBtn.addEventListener('click', captureImage);
+        captureBtn.addEventListener('click', captureAndAnalyze);
         fileInput.addEventListener('change', handleFileUpload);
 
-        async function startCamera() {
+        // Initialize the application
+        async function initializeApp() {
+            updateStatus('Loading TensorFlow.js model...', 'detecting');
+            
+            try {
+                // Load the COCO-SSD model
+                model = await cocoSsd.load();
+                console.log('✅ TensorFlow.js COCO-SSD model loaded');
+                updateStatus('Model loaded - Ready!', 'ready');
+            } catch (error) {
+                console.error('❌ Error loading model:', error);
+                showError('Failed to load AI model. Please refresh the page.');
+                updateStatus('Model load failed', 'error');
+            }
+        }
+
+        // Initialize camera and start real-time detection
+        async function initializeCamera() {
+            if (!model) {
+                showError('AI model not loaded yet. Please wait and try again.');
+                return;
+            }
+
             try {
                 updateStatus('Starting camera...', 'detecting');
                 
                 const constraints = {
                     video: {
-                        facingMode: 'environment', // Use back camera on mobile
+                        facingMode: 'environment', // Back camera on mobile
                         width: { ideal: 1280 },
                         height: { ideal: 720 }
                     }
@@ -486,141 +684,210 @@
                 cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
                 cameraFeed.srcObject = cameraStream;
                 
+                // Wait for video to be ready
+                await new Promise(resolve => {
+                    cameraFeed.onloadedmetadata = resolve;
+                });
+
                 // Update UI
                 cameraContainer.style.display = 'block';
+                detectionStats.style.display = 'grid';
+                detectionInfo.style.display = 'block';
                 startCameraBtn.style.display = 'none';
                 stopCameraBtn.style.display = 'inline-flex';
                 captureBtn.disabled = false;
                 
-                // Start detection simulation (center-focus)
-                startCenterFocusDetection();
+                // Start real-time detection
+                startRealTimeDetection();
                 
-                updateStatus('Camera ready - Point at object', 'ready');
+                updateStatus('Real-time detection active', 'detecting');
                 
             } catch (error) {
-                console.error('Error starting camera:', error);
+                console.error('❌ Camera error:', error);
                 showError('Could not access camera. Please check permissions or use file upload.');
                 updateStatus('Camera error', 'error');
             }
         }
 
+        // Start real-time object detection
+        function startRealTimeDetection() {
+            detectionActive = true;
+            
+            const detectObjects = async () => {
+                if (!detectionActive || !model || !cameraFeed.videoWidth) {
+                    return;
+                }
+
+                const startTime = performance.now();
+                
+                try {
+                    // Run object detection
+                    const predictions = await model.detect(cameraFeed);
+                    
+                    const endTime = performance.now();
+                    const detectionTime = Math.round(endTime - startTime);
+                    
+                    // Update detections
+                    currentDetections = predictions;
+                    updateDetectionOverlay(predictions);
+                    updateDetectionStats(predictions, detectionTime);
+                    
+                } catch (error) {
+                    console.error('Detection error:', error);
+                }
+                
+                // Continue detection loop
+                if (detectionActive) {
+                    requestAnimationFrame(detectObjects);
+                }
+            };
+            
+            detectObjects();
+        }
+
+        // Update detection overlay with bounding boxes
+        function updateDetectionOverlay(predictions) {
+            // Clear previous detections
+            const existingBoxes = detectionOverlay.querySelectorAll('.detection-box');
+            existingBoxes.forEach(box => box.remove());
+            
+            if (predictions.length === 0) return;
+            
+            // Get video dimensions and scale factors
+            const videoRect = cameraFeed.getBoundingClientRect();
+            const scaleX = videoRect.width / cameraFeed.videoWidth;
+            const scaleY = videoRect.height / cameraFeed.videoHeight;
+            
+            predictions.forEach((prediction, index) => {
+                const [x, y, width, height] = prediction.bbox;
+                const confidence = Math.round(prediction.score * 100);
+                
+                // Create detection box
+                const box = document.createElement('div');
+                box.className = 'detection-box';
+                box.style.left = (x * scaleX) + 'px';
+                box.style.top = (y * scaleY) + 'px';
+                box.style.width = (width * scaleX) + 'px';
+                box.style.height = (height * scaleY) + 'px';
+                
+                // Create label
+                const label = document.createElement('div');
+                label.className = 'detection-label';
+                label.textContent = prediction.class;
+                box.appendChild(label);
+                
+                // Create confidence score
+                const confidenceScore = document.createElement('div');
+                confidenceScore.className = 'confidence-score';
+                confidenceScore.textContent = confidence + '%';
+                box.appendChild(confidenceScore);
+                
+                // Color coding based on confidence
+                if (confidence > 80) {
+                    box.style.borderColor = '#00ff41';
+                    label.style.backgroundColor = '#00ff41';
+                } else if (confidence > 60) {
+                    box.style.borderColor = '#ffa502';
+                    label.style.backgroundColor = '#ffa502';
+                } else {
+                    box.style.borderColor = '#ff4757';
+                    label.style.backgroundColor = '#ff4757';
+                }
+                
+                detectionOverlay.appendChild(box);
+            });
+        }
+
+        // Update detection statistics
+        function updateDetectionStats(predictions, detectionTime) {
+            const objectCount = predictions.length;
+            const avgConfidence = objectCount > 0 ? 
+                Math.round(predictions.reduce((sum, p) => sum + p.score, 0) / objectCount * 100) : 0;
+                
+            detectionStats.objectCount = objectCount;
+            detectionStats.averageConfidence = avgConfidence;
+            detectionStats.detectionTime = detectionTime;
+            
+            // Update UI
+            document.getElementById('objectCount').textContent = objectCount;
+            document.getElementById('confidenceAvg').textContent = avgConfidence + '%';
+            document.getElementById('detectionTime').textContent = detectionTime + 'ms';
+        }
+
+        // Stop camera and detection
         function stopCamera() {
+            detectionActive = false;
+            
             if (cameraStream) {
                 cameraStream.getTracks().forEach(track => track.stop());
                 cameraStream = null;
             }
             
-            clearInterval(detectionInterval);
-            
             // Reset UI
             cameraContainer.style.display = 'none';
+            detectionStats.style.display = 'none';
             startCameraBtn.style.display = 'inline-flex';
             stopCameraBtn.style.display = 'none';
             captureBtn.disabled = true;
-            detectionBox.style.display = 'none';
             
             updateStatus('Camera stopped', 'ready');
         }
 
-        function startCenterFocusDetection() {
-            // Simulate center-focus detection like security cameras
-            detectionInterval = setInterval(() => {
-                if (cameraStream && !isDetecting) {
-                    // Show detection box in center area (simulated)
-                    showDetectionBox();
-                }
-            }, 1000);
-        }
-
-        function showDetectionBox() {
-            const container = cameraContainer;
-            const centerX = container.offsetWidth / 2;
-            const centerY = container.offsetHeight / 2;
-            
-            // Simulate different object sizes
-            const sizes = [
-                { w: 120, h: 80, label: 'Object detected' },
-                { w: 150, h: 100, label: 'Building material' },
-                { w: 100, h: 120, label: 'Item found' }
-            ];
-            
-            const randomSize = sizes[Math.floor(Math.random() * sizes.length)];
-            
-            // Position detection box in center
-            const box = detectionBox;
-            box.style.left = (centerX - randomSize.w/2) + 'px';
-            box.style.top = (centerY - randomSize.h/2) + 'px';
-            box.style.width = randomSize.w + 'px';
-            box.style.height = randomSize.h + 'px';
-            box.style.display = 'block';
-            
-            detectionLabel.textContent = randomSize.label;
-        }
-
-        async function captureImage() {
+        // Capture image and analyze with GPT-4 Vision
+        async function captureAndAnalyze() {
             if (!cameraStream) {
                 showError('Camera not active');
                 return;
             }
 
-            isDetecting = true;
-            updateStatus('Capturing...', 'detecting');
+            updateStatus('Capturing image...', 'analyzing');
+            loading.style.display = 'block';
+            results.style.display = 'none';
+            errorMessage.innerHTML = '';
             
             try {
-                // Create canvas and capture frame
+                // Create canvas to capture current frame
                 const canvas = document.createElement('canvas');
                 const context = canvas.getContext('2d');
                 
                 canvas.width = cameraFeed.videoWidth;
                 canvas.height = cameraFeed.videoHeight;
-                
                 context.drawImage(cameraFeed, 0, 0);
                 
                 // Convert to blob
                 canvas.toBlob(async (blob) => {
                     if (blob) {
-                        await analyzeImage(blob, 'camera-capture.jpg');
+                        await analyzeImageWithGPT4(blob, 'camera-capture.jpg');
                     }
-                }, 'image/jpeg', 0.8);
+                }, 'image/jpeg', 0.9);
                 
             } catch (error) {
-                console.error('Error capturing image:', error);
+                console.error('❌ Capture error:', error);
                 showError('Failed to capture image');
                 updateStatus('Capture failed', 'error');
-            } finally {
-                isDetecting = false;
+                loading.style.display = 'none';
             }
         }
 
+        // Handle file upload
         function handleFileUpload(event) {
             const file = event.target.files[0];
             if (file && file.type.startsWith('image/')) {
-                analyzeImage(file, file.name);
+                analyzeImageWithGPT4(file, file.name);
             }
         }
 
-        async function analyzeImage(imageData, filename) {
+        // Analyze image with GPT-4 Vision
+        async function analyzeImageWithGPT4(imageData, filename) {
             loading.style.display = 'block';
-            results.style.display = 'none';
-            errorMessage.innerHTML = '';
-            updateStatus('Analyzing...', 'detecting');
+            document.getElementById('loadingText').textContent = '🧠 Analyzing with GPT-4 Vision...';
+            updateStatus('GPT-4 Vision analyzing...', 'analyzing');
 
             const formData = new FormData();
             formData.append('image', imageData, filename);
-            
-            // Add crop data if detection box is visible
-            if (detectionBox.style.display === 'block') {
-                const cropData = {
-                    x: parseInt(detectionBox.style.left) || 0,
-                    y: parseInt(detectionBox.style.top) || 0,
-                    width: parseInt(detectionBox.style.width) || 100,
-                    height: parseInt(detectionBox.style.height) || 100
-                };
-                formData.append('cropData', JSON.stringify(cropData));
-            }
 
             try {
-                const response = await fetch('/analyze-region', {
+                const response = await fetch('/analyze-image', {
                     method: 'POST',
                     body: formData
                 });
@@ -631,123 +898,206 @@
                     throw new Error(data.error || 'Analysis failed');
                 }
 
-                displayResults(data);
+                displayAnalysisResults(data);
                 updateStatus('Analysis complete', 'ready');
                 
             } catch (error) {
-                showError('Error analyzing image: ' + error.message);
+                console.error('❌ Analysis error:', error);
+                showError('GPT-4 Vision analysis failed: ' + error.message);
                 updateStatus('Analysis failed', 'error');
             } finally {
                 loading.style.display = 'none';
             }
         }
 
-        function displayResults(data) {
-            const { analysis, summary, metadata } = data;
+        // Display analysis results from GPT-4 Vision
+        function displayAnalysisResults(data) {
+            const { analysis, metadata } = data;
             
-            // Display primary detection
-            displayPrimaryDetection(summary);
+            // Display primary result
+            displayPrimaryResult(analysis);
             
-            // Display categorized results
-            displayCategorizedResults(analysis);
-            
-            // Display recommendations
-            displayRecommendations(summary);
+            // Display detailed analysis
+            displayDetailedAnalysis(analysis, metadata);
             
             results.style.display = 'block';
         }
 
-        function displayPrimaryDetection(summary) {
-            const primaryDiv = document.getElementById('primaryDetection');
+        function displayPrimaryResult(analysis) {
+            const primaryDiv = document.getElementById('primaryResult');
             
-            if (summary.primaryItem) {
-                const confidenceClass = getConfidenceClass(summary.primaryItem.confidence);
+            if (analysis.primaryItem) {
+                const item = analysis.primaryItem;
+                const conditionIcon = getConditionIcon(item.condition);
+                const categoryIcon = getCategoryIcon(item.category);
                 
                 primaryDiv.innerHTML = `
-                    <div class="primary-detection">
-                        <div class="primary-item">🎯 ${summary.primaryItem.name}</div>
-                        <div class="confidence-display">
-                            <span class="confidence-badge ${confidenceClass}">
-                                ${summary.primaryItem.confidence}% Confidence
-                            </span>
+                    <div class="primary-result">
+                        <div class="primary-item">
+                            ${categoryIcon} ${item.name}
                         </div>
-                        <div class="category-tag">Category: ${summary.category}</div>
-                        <div class="category-tag">${summary.xactimateReady ? '✅ Ready for XACTIMATE' : '⚠️ Needs verification'}</div>
+                        <div class="confidence-display">
+                            ${item.confidence}% Confidence • ${conditionIcon} ${item.condition}
+                        </div>
+                        <div class="result-tags">
+                            <span class="result-tag">📋 ${item.category}</span>
+                            ${item.material ? `<span class="result-tag">🔧 ${item.material}</span>` : ''}
+                            ${item.ageEstimate ? `<span class="result-tag">📅 ~${item.ageEstimate} years</span>` : ''}
+                            ${item.brandModel ? `<span class="result-tag">🏷️ ${item.brandModel}</span>` : ''}
+                        </div>
                     </div>
                 `;
             } else {
                 primaryDiv.innerHTML = `
-                    <div class="primary-detection">
-                        <div class="primary-item">🔍 No Clear Detection</div>
-                        <div class="confidence-display">Please try again with better positioning</div>
+                    <div class="primary-result">
+                        <div class="primary-item">🔍 Analysis Complete</div>
+                        <div class="confidence-display">Review detailed results below</div>
                     </div>
                 `;
             }
         }
 
-        function displayCategorizedResults(analysis) {
+        function displayDetailedAnalysis(analysis, metadata) {
             const resultsGrid = document.getElementById('resultsGrid');
             resultsGrid.innerHTML = '';
             
-            const categories = [
-                { key: 'roofing', title: '🏗️ Roofing Materials', icon: '🏠' },
-                { key: 'exterior', title: '🏘️ Exterior Elements', icon: '🚪' },
-                { key: 'interior', title: '🏠 Interior Items', icon: '🛋️' },
-                { key: 'appliances', title: '⚡ Appliances', icon: '🔌' },
-                { key: 'fixtures', title: '💡 Fixtures', icon: '🚿' },
-                { key: 'contents', title: '📦 Contents', icon: '🪑' },
-                { key: 'objects', title: '🔍 Detected Objects', icon: '👁️' }
-            ];
+            // Damage Assessment Card
+            if (analysis.damageAssessment) {
+                const damageCard = createDamageAssessmentCard(analysis.damageAssessment);
+                resultsGrid.appendChild(damageCard);
+            }
             
-            categories.forEach(category => {
-                const items = analysis[category.key] || [];
-                if (items.length > 0) {
-                    resultsGrid.appendChild(createResultCard(category.title, items));
-                }
-            });
+            // XACTIMATE Notes Card
+            if (analysis.xactimateNotes) {
+                const xactimateCard = createXactimateCard(analysis.xactimateNotes);
+                resultsGrid.appendChild(xactimateCard);
+            }
+            
+            // Detected Items Card
+            if (analysis.detectedItems && analysis.detectedItems.length > 0) {
+                const itemsCard = createDetectedItemsCard(analysis.detectedItems);
+                resultsGrid.appendChild(itemsCard);
+            }
+            
+            // Recommendations Card
+            if (analysis.recommendations && analysis.recommendations.length > 0) {
+                const recommendationsCard = createRecommendationsCard(analysis.recommendations);
+                resultsGrid.appendChild(recommendationsCard);
+            }
+            
+            // Metadata Card
+            const metadataCard = createMetadataCard(metadata, analysis.summary);
+            resultsGrid.appendChild(metadataCard);
         }
 
-        function createResultCard(title, items) {
+        function createDamageAssessmentCard(damage) {
             const card = document.createElement('div');
             card.className = 'result-card';
             
-            let itemsHtml = items.map(item => {
-                const confidenceClass = getConfidenceClass(item.confidence);
-                const name = item.description || item.name;
-                return `
-                    <div class="detection-item">
-                        <span class="item-name">${name}</span>
-                        <span class="confidence-badge ${confidenceClass}">${item.confidence}%</span>
-                    </div>
-                `;
-            }).join('');
+            const severityClass = damage.severity === 'none' ? 'none' : 
+                                 damage.severity === 'minor' ? '' : 'severe';
             
             card.innerHTML = `
-                <h3>${title}</h3>
+                <h3>🔍 Damage Assessment</h3>
+                <div class="damage-assessment ${severityClass}">
+                    <strong>Status:</strong> ${damage.hasDamage ? '⚠️ Damage Detected' : '✅ No Damage Found'}<br>
+                    ${damage.damageType !== 'none' ? `<strong>Type:</strong> ${damage.damageType}<br>` : ''}
+                    ${damage.severity !== 'none' ? `<strong>Severity:</strong> ${damage.severity}<br>` : ''}
+                    ${damage.description ? `<strong>Description:</strong> ${damage.description}` : ''}
+                </div>
+            `;
+            
+            return card;
+        }
+
+        function createXactimateCard(notes) {
+            const card = document.createElement('div');
+            card.className = 'result-card';
+            
+            card.innerHTML = `
+                <h3>📊 XACTIMATE Notes</h3>
+                <div class="xactimate-notes">
+                    ${notes}
+                </div>
+            `;
+            
+            return card;
+        }
+
+        function createDetectedItemsCard(items) {
+            const card = document.createElement('div');
+            card.className = 'result-card';
+            
+            let itemsHtml = items.map(item => `
+                <div style="background: #f8f9fa; padding: 12px; border-radius: 8px; margin-bottom: 8px;">
+                    <strong>${item.name}</strong> (${item.confidence}%)<br>
+                    <small>${item.description}</small>
+                </div>
+            `).join('');
+            
+            card.innerHTML = `
+                <h3>🎯 Detected Items</h3>
                 ${itemsHtml}
             `;
             
             return card;
         }
 
-        function displayRecommendations(summary) {
-            const recDiv = document.getElementById('recommendations');
+        function createRecommendationsCard(recommendations) {
+            const card = document.createElement('div');
+            card.className = 'result-card';
             
-            if (summary.recommendations && summary.recommendations.length > 0) {
-                const recHtml = summary.recommendations.map(rec => `<p>• ${rec}</p>`).join('');
-                recDiv.innerHTML = `
-                    <div class="recommendations">
-                        <h3>💡 Recommendations</h3>
-                        ${recHtml}
-                    </div>
-                `;
-            }
+            let recHtml = recommendations.map(rec => `<li>${rec}</li>`).join('');
+            
+            card.innerHTML = `
+                <h3>💡 Recommendations</h3>
+                <div class="recommendations">
+                    <ul>${recHtml}</ul>
+                </div>
+            `;
+            
+            return card;
         }
 
-        function getConfidenceClass(confidence) {
-            if (confidence >= 80) return 'confidence-high';
-            if (confidence >= 60) return 'confidence-medium';
-            return 'confidence-low';
+        function createMetadataCard(metadata, summary) {
+            const card = document.createElement('div');
+            card.className = 'result-card';
+            
+            card.innerHTML = `
+                <h3>📈 Analysis Details</h3>
+                <p><strong>Model:</strong> ${metadata.model}</p>
+                <p><strong>File:</strong> ${metadata.filename}</p>
+                <p><strong>Size:</strong> ${(metadata.fileSize / 1024).toFixed(1)} KB</p>
+                <p><strong>Processed:</strong> ${new Date(metadata.processedAt).toLocaleString()}</p>
+                ${metadata.tokensUsed ? `<p><strong>Tokens Used:</strong> ${metadata.tokensUsed}</p>` : ''}
+                ${summary ? `<p><strong>Summary:</strong> ${summary}</p>` : ''}
+            `;
+            
+            return card;
+        }
+
+        // Helper functions
+        function getConditionIcon(condition) {
+            const icons = {
+                'new': '🆕',
+                'good': '✅',
+                'fair': '⚠️',
+                'damaged': '❌',
+                'severely_damaged': '🚨'
+            };
+            return icons[condition] || '❓';
+        }
+
+        function getCategoryIcon(category) {
+            const icons = {
+                'roofing': '🏠',
+                'exterior': '🚪',
+                'interior': '🛋️',
+                'appliances': '🔌',
+                'fixtures': '💡',
+                'contents': '📦'
+            };
+            return icons[category] || '🔧';
         }
 
         function updateStatus(message, type) {
@@ -770,14 +1120,17 @@
             `;
         }
 
-        // Initialize app
-        console.log('🚀 XM8Detection loaded - Ready for building & contents identification!');
+        // Initialize app when page loads
+        window.addEventListener('load', initializeApp);
         
         // Check camera support
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
             showError('Camera not supported on this device. Please use file upload instead.');
             startCameraBtn.style.display = 'none';
         }
+
+        console.log('🚀 XM8Detection v2.0 loaded successfully!');
+        console.log('🧠 TensorFlow.js + GPT-4 Vision ready for professional analysis');
     </script>
 </body>
 </html>
