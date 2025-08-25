@@ -3,7 +3,7 @@ const express = require('express');
 const multer = require('multer');
 const cors = require('cors');
 const path = require('path');
-const vision = require('@google-cloud/vision');
+const OpenAI = require('openai');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -18,7 +18,7 @@ app.use(express.static('public'));
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 20 * 1024 * 1024, // 20MB limit for better quality images
+    fileSize: 20 * 1024 * 1024, // 20MB limit
   },
   fileFilter: (req, file, cb) => {
     if (file.mimetype.startsWith('image/')) {
@@ -29,13 +29,9 @@ const upload = multer({
   }
 });
 
-// Initialize Google Vision client
-const visionClient = new vision.ImageAnnotatorClient({
-  credentials: {
-    client_email: process.env.GOOGLE_CLIENT_EMAIL,
-    private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    project_id: process.env.GOOGLE_PROJECT_ID,
-  }
+// Initialize OpenAI client
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
 // Serve the main HTML page
@@ -45,221 +41,182 @@ app.get('/', (req, res) => {
 
 // Health check endpoint
 app.get('/health', (req, res) => {
-  res.json({ status: 'OK', timestamp: new Date().toISOString() });
+  res.json({ 
+    status: 'OK', 
+    timestamp: new Date().toISOString(),
+    version: '2.0.0 - TensorFlow.js + GPT-4 Vision' 
+  });
 });
 
-// Main image analysis endpoint - now handles cropped regions
-app.post('/analyze-region', upload.single('image'), async (req, res) => {
+// Main image analysis endpoint with GPT-4 Vision
+app.post('/analyze-image', upload.single('image'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No image file provided' });
     }
 
-    const { cropData } = req.body;
-    console.log('Analyzing cropped region:', req.file.originalname, 'Size:', req.file.size);
-    console.log('Crop data:', cropData);
-
-    let imageBuffer = req.file.buffer;
-
-    // If crop data is provided, we would crop the image here
-    // For now, we'll analyze the full image but note that cropping was requested
-    if (cropData) {
-      console.log('Crop region specified:', cropData);
-      // In a full implementation, you'd crop the image using a library like sharp or canvas
-      // For this demo, we'll proceed with the full image
+    if (!process.env.OPENAI_API_KEY) {
+      return res.status(500).json({ 
+        error: 'OpenAI API key not configured. Please add OPENAI_API_KEY to environment variables.' 
+      });
     }
 
-    // Analyze image with Google Vision API - multiple detection types
-    const [labelResult] = await visionClient.labelDetection({
-      image: { content: imageBuffer }
-    });
+    console.log('Analyzing image with GPT-4 Vision:', req.file.originalname, 'Size:', req.file.size);
 
-    const [objectResult] = await visionClient.objectLocalization({
-      image: { content: imageBuffer }
-    });
+    // Convert image buffer to base64
+    const base64Image = req.file.buffer.toString('base64');
+    const imageUrl = `data:${req.file.mimetype};base64,${base64Image}`;
 
-    const [textResult] = await visionClient.textDetection({
-      image: { content: imageBuffer }
-    });
+    // Create detailed prompt for building/contents analysis
+    const analysisPrompt = `You are a professional building inspector and contents specialist analyzing this image for insurance and construction purposes.
 
-    // Process results
-    const labels = labelResult.labelAnnotations || [];
-    const objects = objectResult.localizedObjectAnnotations || [];
-    const textAnnotations = textResult.textAnnotations || [];
+Please provide a detailed analysis in the following JSON format:
 
-    // Enhanced categorization for building materials and contents
-    const buildingKeywords = {
-      roofing: ['roof', 'roofing', 'shingle', 'tile', 'slate', 'asphalt', 'metal roofing', 'gutter', 'downspout', 'flashing', 'ridge', 'vent'],
-      exterior: ['siding', 'brick', 'stucco', 'window', 'door', 'garage', 'fence', 'deck', 'patio'],
-      interior: ['floor', 'flooring', 'carpet', 'hardwood', 'tile', 'ceiling', 'wall', 'paint', 'drywall'],
-      appliances: ['refrigerator', 'stove', 'oven', 'dishwasher', 'washer', 'dryer', 'microwave', 'hvac', 'furnace', 'air conditioner'],
-      fixtures: ['light', 'lighting', 'fixture', 'faucet', 'sink', 'toilet', 'bathtub', 'shower', 'cabinet', 'countertop'],
-      contents: ['furniture', 'sofa', 'chair', 'table', 'bed', 'dresser', 'television', 'computer', 'electronics']
-    };
+{
+  "primaryItem": {
+    "name": "specific item name",
+    "category": "roofing|exterior|interior|appliances|fixtures|contents",
+    "confidence": 85,
+    "condition": "new|good|fair|damaged|severely_damaged",
+    "material": "specific material type",
+    "ageEstimate": "approximate age in years",
+    "brandModel": "if visible"
+  },
+  "detectedItems": [
+    {
+      "name": "item name", 
+      "category": "category",
+      "confidence": 90,
+      "description": "detailed description"
+    }
+  ],
+  "damageAssessment": {
+    "hasDamage": true/false,
+    "damageType": "water|fire|wind|impact|wear|none",
+    "severity": "minor|moderate|major|total_loss",
+    "description": "specific damage description"
+  },
+  "xactimateNotes": "Professional notes suitable for XACTIMATE coding and insurance estimates",
+  "recommendations": ["action item 1", "action item 2"],
+  "summary": "Professional summary for insurance/construction use"
+}
 
-    const categorizedResults = {
-      primaryDetection: null,
-      roofing: [],
-      exterior: [],
-      interior: [],
-      appliances: [],
-      fixtures: [],
-      contents: [],
-      other: [],
-      objects: [],
-      text: textAnnotations.length > 0 ? textAnnotations[0].description : null
-    };
+Focus on:
+- Building materials (roofing, siding, flooring, etc.)
+- Appliances and fixtures (HVAC, plumbing, electrical)
+- Personal contents (furniture, electronics, tools)
+- Damage assessment if present
+- Professional terminology suitable for insurance claims
+- Age and condition assessment
+- Brand identification when visible
 
-    // Find the highest confidence detection as primary
-    let highestConfidence = 0;
-    let primaryItem = null;
+Be specific and professional - this will be used for insurance estimates and construction planning.`;
 
-    // Process labels
-    labels.forEach(label => {
-      const labelData = {
-        description: label.description,
-        confidence: Math.round(label.score * 100),
-        score: label.score,
-        type: 'label'
-      };
-
-      if (label.score > highestConfidence) {
-        highestConfidence = label.score;
-        primaryItem = labelData;
-      }
-
-      // Categorize by building type
-      let categorized = false;
-      for (const [category, keywords] of Object.entries(buildingKeywords)) {
-        if (keywords.some(keyword => 
-          label.description.toLowerCase().includes(keyword.toLowerCase()))) {
-          categorizedResults[category].push(labelData);
-          categorized = true;
-          break;
+    // Call GPT-4 Vision
+    const response = await openai.chat.completions.create({
+      model: "gpt-4-vision-preview",
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: analysisPrompt
+            },
+            {
+              type: "image_url",
+              image_url: {
+                url: imageUrl,
+                detail: "high"
+              }
+            }
+          ]
         }
-      }
-
-      if (!categorized && label.score > 0.6) {
-        categorizedResults.other.push(labelData);
-      }
+      ],
+      max_tokens: 1500,
+      temperature: 0.1 // Lower temperature for more consistent, professional results
     });
 
-    // Process objects with higher priority for primary detection
-    objects.forEach(obj => {
-      const objData = {
-        name: obj.name,
-        confidence: Math.round(obj.score * 100),
-        score: obj.score,
-        type: 'object',
-        boundingBox: obj.boundingPoly
+    const gptResponse = response.choices[0].message.content;
+    
+    // Try to parse JSON response
+    let analysis;
+    try {
+      // Extract JSON from response if it's wrapped in text
+      const jsonMatch = gptResponse.match(/\{[\s\S]*\}/);
+      const jsonString = jsonMatch ? jsonMatch[0] : gptResponse;
+      analysis = JSON.parse(jsonString);
+    } catch (parseError) {
+      console.error('JSON parse error:', parseError);
+      // Fallback - create structured response from text
+      analysis = {
+        primaryItem: {
+          name: "Analysis completed",
+          category: "unknown",
+          confidence: 75,
+          condition: "unknown"
+        },
+        detectedItems: [],
+        damageAssessment: {
+          hasDamage: false,
+          damageType: "none",
+          severity: "none"
+        },
+        xactimateNotes: gptResponse,
+        recommendations: ["Review analysis for accuracy"],
+        summary: gptResponse.substring(0, 200) + "..."
       };
+    }
 
-      // Objects often have higher relevance for building detection
-      if (obj.score > highestConfidence) {
-        highestConfidence = obj.score;
-        primaryItem = objData;
-      }
-
-      categorizedResults.objects.push(objData);
-    });
-
-    // Set primary detection
-    categorizedResults.primaryDetection = primaryItem;
-
-    // Generate enhanced analysis
-    const analysis = generateBuildingAnalysis(categorizedResults);
-
-    res.json({
+    // Add metadata
+    const result = {
       success: true,
-      analysis: categorizedResults,
-      summary: analysis,
+      analysis: analysis,
       metadata: {
         filename: req.file.originalname,
         fileSize: req.file.size,
         processedAt: new Date().toISOString(),
-        cropApplied: !!cropData
-      }
-    });
+        model: "gpt-4-vision-preview",
+        tokensUsed: response.usage?.total_tokens || 0
+      },
+      rawResponse: gptResponse // For debugging
+    };
+
+    res.json(result);
 
   } catch (error) {
-    console.error('Error analyzing image:', error);
+    console.error('Error analyzing image with GPT-4 Vision:', error);
+    
+    // Handle specific OpenAI errors
+    if (error.status === 401) {
+      return res.status(401).json({ 
+        error: 'Invalid OpenAI API key. Please check your OPENAI_API_KEY environment variable.' 
+      });
+    }
+    
+    if (error.status === 429) {
+      return res.status(429).json({ 
+        error: 'OpenAI API rate limit exceeded. Please try again in a moment.' 
+      });
+    }
+    
     res.status(500).json({ 
-      error: 'Failed to analyze image',
+      error: 'Failed to analyze image with GPT-4 Vision',
       details: error.message 
     });
   }
 });
 
-// Enhanced analysis for building materials and contents
-function generateBuildingAnalysis(results) {
-  let analysis = {
-    primaryItem: null,
-    category: 'unknown',
-    confidence: 'low',
-    detectedItems: [],
-    recommendations: [],
-    xactimateReady: false
-  };
-
-  if (results.primaryDetection) {
-    analysis.primaryItem = {
-      name: results.primaryDetection.name || results.primaryDetection.description,
-      confidence: results.primaryDetection.confidence,
-      type: results.primaryDetection.type
-    };
-
-    // Determine category based on what was found
-    const categories = ['roofing', 'exterior', 'interior', 'appliances', 'fixtures', 'contents'];
-    for (const category of categories) {
-      if (results[category].length > 0) {
-        analysis.category = category;
-        break;
-      }
-    }
-
-    // Set confidence level
-    if (results.primaryDetection.confidence > 85) {
-      analysis.confidence = 'high';
-      analysis.xactimateReady = true;
-    } else if (results.primaryDetection.confidence > 70) {
-      analysis.confidence = 'medium';
-      analysis.xactimateReady = true;
-    } else {
-      analysis.confidence = 'low';
-    }
-
-    // Collect all significant detections
-    const allItems = [
-      ...results.roofing,
-      ...results.exterior, 
-      ...results.interior,
-      ...results.appliances,
-      ...results.fixtures,
-      ...results.contents,
-      ...results.objects
-    ].filter(item => item.confidence > 60)
-     .sort((a, b) => b.confidence - a.confidence)
-     .slice(0, 5);
-
-    analysis.detectedItems = allItems;
-
-    // Generate recommendations
-    if (analysis.xactimateReady) {
-      analysis.recommendations.push(`${analysis.primaryItem.name} identified with ${analysis.confidence} confidence - ready for XACTIMATE coding`);
-    } else {
-      analysis.recommendations.push('Low confidence detection - consider retaking photo with better lighting or closer view');
-    }
-
-    if (analysis.category !== 'unknown') {
-      analysis.recommendations.push(`Category: ${analysis.category.charAt(0).toUpperCase() + analysis.category.slice(1)} - suitable for property assessment`);
-    }
-
-  } else {
-    analysis.recommendations.push('No clear objects detected. Ensure item is centered and well-lit in the frame');
-  }
-
-  return analysis;
-}
+// XACTIMATE code lookup endpoint (placeholder for future enhancement)
+app.get('/xactimate-codes', (req, res) => {
+  res.json({
+    message: "XACTIMATE code database integration coming soon",
+    supportedCategories: [
+      "roofing", "exterior", "interior", 
+      "appliances", "fixtures", "contents"
+    ]
+  });
+});
 
 // Error handling middleware
 app.use((error, req, res, next) => {
@@ -275,7 +232,8 @@ app.use((error, req, res, next) => {
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`🚀 XM8Detection server running on port ${PORT}`);
+  console.log(`🚀 XM8Detection v2.0 server running on port ${PORT}`);
   console.log(`📱 Visit: http://localhost:${PORT}`);
-  console.log(`🏠 Ready for building & contents detection!`);
+  console.log(`🧠 Powered by TensorFlow.js + GPT-4 Vision`);
+  console.log(`🏠 Ready for professional building & contents analysis!`);
 });
