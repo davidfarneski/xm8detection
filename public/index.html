@@ -607,9 +607,9 @@
         </div>
     </div>
 
-    <!-- TensorFlow.js and COCO-SSD Model -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tensorflow/4.10.0/tf.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tensorflow-models-coco-ssd/2.2.2/coco-ssd.min.js"></script>
+    <!-- TensorFlow.js with WORKING CDN links -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@latest/dist/coco-ssd.min.js"></script>
 
     <script>
         // Global variables
@@ -652,6 +652,34 @@
             updateStatus('Loading TensorFlow.js model...', 'detecting');
             
             try {
+                // Wait for TensorFlow to load first
+                await new Promise((resolve) => {
+                    if (typeof tf !== 'undefined') {
+                        resolve();
+                    } else {
+                        const checkTf = setInterval(() => {
+                            if (typeof tf !== 'undefined') {
+                                clearInterval(checkTf);
+                                resolve();
+                            }
+                        }, 100);
+                    }
+                });
+
+                // Wait for COCO-SSD to load
+                await new Promise((resolve) => {
+                    if (typeof cocoSsd !== 'undefined') {
+                        resolve();
+                    } else {
+                        const checkCoco = setInterval(() => {
+                            if (typeof cocoSsd !== 'undefined') {
+                                clearInterval(checkCoco);
+                                resolve();
+                            }
+                        }, 100);
+                    }
+                });
+
                 // Load the COCO-SSD model
                 model = await cocoSsd.load();
                 console.log('✅ TensorFlow.js COCO-SSD model loaded');
