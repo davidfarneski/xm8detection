@@ -3,9 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>XM8 Detection - Universal Building & Contents Identification</title>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@latest"></script>
+    <title>XM8 Professional - Unlimited Contents Detection</title>
     <style>
         * {
             margin: 0;
@@ -15,13 +13,13 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
             min-height: 100vh;
             color: white;
         }
 
         .container {
-            max-width: 800px;
+            max-width: 900px;
             margin: 0 auto;
             padding: 20px;
         }
@@ -40,6 +38,86 @@
         .header p {
             font-size: 1.2em;
             opacity: 0.9;
+        }
+
+        .phase-info {
+            background: rgba(0,0,0,0.2);
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            border-left: 4px solid #22c55e;
+        }
+
+        .api-setup {
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .api-setup h3 {
+            color: #fbbf24;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .api-inputs {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .api-input-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .api-input-group label {
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #a3e635;
+        }
+
+        .api-input-group input {
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(0,0,0,0.3);
+            color: white;
+            font-size: 1em;
+            border: 2px solid transparent;
+            transition: border-color 0.3s ease;
+        }
+
+        .api-input-group input:focus {
+            outline: none;
+            border-color: #22c55e;
+        }
+
+        .api-input-group input::placeholder {
+            color: rgba(255,255,255,0.5);
+        }
+
+        .api-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.9em;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ef4444;
+        }
+
+        .status-indicator.ready {
+            background: #22c55e;
         }
 
         .camera-container {
@@ -67,37 +145,42 @@
             display: block;
         }
 
-        #canvas {
+        .camera-overlay {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
             pointer-events: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
-        .center-guide {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 100px;
-            height: 100px;
-            border: 2px dashed rgba(255,255,255,0.5);
-            border-radius: 10px;
-            pointer-events: none;
+        .capture-frame {
+            width: 200px;
+            height: 200px;
+            border: 3px dashed rgba(255,255,255,0.6);
+            border-radius: 15px;
+            position: relative;
         }
 
-        .center-guide::before {
-            content: '';
+        .capture-frame::before {
+            content: '📸 Center item here';
             position: absolute;
-            top: 50%;
+            top: -30px;
             left: 50%;
-            transform: translate(-50%, -50%);
-            width: 20px;
-            height: 20px;
-            border: 2px solid rgba(255,255,255,0.7);
-            border-radius: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.7);
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            white-space: nowrap;
+        }
+
+        .capture-frame.ready {
+            border-color: #22c55e;
+            box-shadow: 0 0 20px rgba(34, 197, 94, 0.3);
         }
 
         .controls {
@@ -108,7 +191,7 @@
         #status {
             font-size: 1.3em;
             font-weight: 600;
-            margin-bottom: 15px;
+            margin-bottom: 20px;
             padding: 15px;
             background: rgba(0,0,0,0.2);
             border-radius: 10px;
@@ -129,10 +212,10 @@
             cursor: pointer;
             transition: all 0.3s ease;
             box-shadow: 0 5px 15px rgba(34, 197, 94, 0.4);
-            display: none;
+            margin: 0 10px;
         }
 
-        #captureBtn:hover {
+        #captureBtn:hover:not(:disabled) {
             transform: translateY(-2px);
             box-shadow: 0 7px 20px rgba(34, 197, 94, 0.6);
         }
@@ -141,6 +224,25 @@
             opacity: 0.6;
             cursor: not-allowed;
             transform: none;
+        }
+
+        #startCameraBtn {
+            background: linear-gradient(45deg, #3b82f6, #1d4ed8);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.2em;
+            font-weight: 600;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(59, 130, 246, 0.4);
+            margin: 0 10px;
+        }
+
+        #startCameraBtn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 7px 20px rgba(59, 130, 246, 0.6);
         }
 
         .error {
@@ -166,13 +268,46 @@
             color: #22c55e;
             margin-bottom: 15px;
             font-size: 1.5em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .analysis-tabs {
+            display: flex;
+            margin-bottom: 20px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            background: transparent;
+            color: white;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .tab-btn.active {
+            background: rgba(34, 197, 94, 0.3);
+            color: #22c55e;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
         }
 
         .result-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 15px;
-            margin-top: 15px;
         }
 
         .result-item {
@@ -187,11 +322,59 @@
             color: #a3e635;
             display: block;
             margin-bottom: 5px;
+            font-size: 0.9em;
         }
 
-        .result-item value {
+        .result-item .value {
             font-size: 1.1em;
-            font-family: 'Courier New', monospace;
+            line-height: 1.4;
+            word-break: break-word;
+        }
+
+        .analysis-summary {
+            background: rgba(34, 197, 94, 0.1);
+            border: 2px solid rgba(34, 197, 94, 0.3);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .summary-title {
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #22c55e;
+            margin-bottom: 10px;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: #22c55e;
+            animation: spin 1s ease-in-out infinite;
+            margin-left: 10px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #22c55e, #16a34a);
+            width: 0%;
+            transition: width 0.3s ease;
         }
 
         @media (max-width: 768px) {
@@ -203,101 +386,200 @@
                 font-size: 2em;
             }
             
+            .api-inputs {
+                grid-template-columns: 1fr;
+            }
+            
             .result-grid {
                 grid-template-columns: 1fr;
             }
+
+            .controls {
+                flex-wrap: wrap;
+            }
+
+            #captureBtn, #startCameraBtn {
+                margin: 5px;
+                min-width: 200px;
+            }
         }
 
-        .loading {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid rgba(255,255,255,0.3);
-            border-radius: 50%;
-            border-top-color: #22c55e;
-            animation: spin 1s ease-in-out infinite;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
+        .hidden {
+            display: none !important;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>📦 XM8 Detection - PHASE 1</h1>
-            <p>Personal Belongings & Household Goods Detection</p>
-            <div style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 10px; margin-top: 10px;">
-                <small>🏠 <strong>PHASE 1:</strong> Furniture, Electronics, Appliances (Non-Permanent Items)<br>
-                🔧 <strong>PHASE 2:</strong> Building Components (Coming Soon)</small>
+            <h1>🔍 XM8 Professional</h1>
+            <p>Unlimited Contents Detection with Hybrid AI</p>
+            <div class="phase-info">
+                <strong>PHASE 1:</strong> Personal Belongings & Household Goods - Unlimited Item Recognition
             </div>
         </div>
 
+        <div class="api-setup">
+            <h3>🔑 API Configuration</h3>
+            <p style="margin-bottom: 15px; opacity: 0.9;">Enter your API keys to enable professional-grade unlimited item detection:</p>
+            
+            <div class="api-inputs">
+                <div class="api-input-group">
+                    <label for="openaiKey">OpenAI API Key (GPT-4 Vision)</label>
+                    <input type="password" id="openaiKey" placeholder="sk-..." />
+                    <div class="api-status">
+                        <div class="status-indicator" id="openaiStatus"></div>
+                        <span id="openaiStatusText">Not configured</span>
+                    </div>
+                </div>
+                
+                <div class="api-input-group">
+                    <label for="googleKey">Google Cloud API Key (Vision)</label>
+                    <input type="password" id="googleKey" placeholder="AIza..." />
+                    <div class="api-status">
+                        <div class="status-indicator" id="googleStatus"></div>
+                        <span id="googleStatusText">Not configured</span>
+                    </div>
+                </div>
+            </div>
+
+            <p style="font-size: 0.9em; opacity: 0.8;">
+                💡 <strong>Need API keys?</strong> 
+                <a href="https://platform.openai.com/api-keys" target="_blank" style="color: #60a5fa;">Get OpenAI Key</a> | 
+                <a href="https://console.cloud.google.com/apis/credentials" target="_blank" style="color: #60a5fa;">Get Google Key</a>
+                <br>
+                🔒 Keys are stored locally in your browser and never transmitted to our servers.
+            </p>
+        </div>
+
         <div class="camera-container">
-            <div id="videoContainer">
+            <div id="videoContainer" class="hidden">
                 <video id="video" autoplay playsinline></video>
-                <canvas id="canvas"></canvas>
-                <div class="center-guide"></div>
+                <div class="camera-overlay">
+                    <div class="capture-frame" id="captureFrame"></div>
+                </div>
             </div>
             
             <div class="controls">
-                <div id="status">🚀 Initializing camera and AI model...</div>
-                <button id="captureBtn" onclick="captureAndAnalyze()">Analyze Object</button>
+                <div id="status">🚀 Ready to start camera when API keys are configured</div>
+                <div class="progress-bar hidden" id="progressBar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <button id="startCameraBtn" onclick="initializeCamera()">Start Camera</button>
+                <button id="captureBtn" class="hidden" onclick="captureAndAnalyze()">Analyze Item</button>
             </div>
         </div>
 
         <div id="error" class="error"></div>
 
         <div id="results" class="results">
-            <h3>🎯 Detection Results</h3>
-            <div id="resultsContent" class="result-grid"></div>
+            <h3>🎯 Professional Analysis Results</h3>
+            
+            <div class="analysis-summary" id="analysisSummary"></div>
+
+            <div class="analysis-tabs">
+                <button class="tab-btn active" onclick="showTab('combined')">Combined Analysis</button>
+                <button class="tab-btn" onclick="showTab('gpt4')">GPT-4 Vision</button>
+                <button class="tab-btn" onclick="showTab('google')">Google Vision</button>
+                <button class="tab-btn" onclick="showTab('xactimate')">XACTIMATE Codes</button>
+            </div>
+
+            <div id="combinedTab" class="tab-content active">
+                <div id="combinedResults" class="result-grid"></div>
+            </div>
+            
+            <div id="gpt4Tab" class="tab-content">
+                <div id="gpt4Results" class="result-grid"></div>
+            </div>
+            
+            <div id="googleTab" class="tab-content">
+                <div id="googleResults" class="result-grid"></div>
+            </div>
+            
+            <div id="xactimateTab" class="tab-content">
+                <div id="xactimateResults" class="result-grid"></div>
+            </div>
         </div>
     </div>
 
     <script>
         // Global variables
-        let model;
         let video;
-        let canvas;
-        let ctx;
         let isCapturing = false;
-
-        // Enhanced stabilization variables
-        let stableDetections = [];
-        let frameCount = 0;
-        let lastStableBox = null;
-        const STABILITY_THRESHOLD = 8;
-        const DETECTION_CONFIDENCE = 0.4;
-        const BOX_SMOOTHING = 0.7;
+        let apiKeys = {
+            openai: localStorage.getItem('xm8_openai_key') || '',
+            google: localStorage.getItem('xm8_google_key') || ''
+        };
 
         // Initialize the app
         async function init() {
             video = document.getElementById('video');
-            canvas = document.getElementById('canvas');
-            ctx = canvas.getContext('2d');
-
-            // Initialize camera
-            const cameraSuccess = await initializeCamera();
-            if (!cameraSuccess) return;
-
-            // Load model
-            await loadModel();
             
-            // Start detection loop
-            detectObjects();
-            setInterval(detectObjects, 100); // 10 FPS detection
+            // Load saved API keys
+            if (apiKeys.openai) {
+                document.getElementById('openaiKey').value = apiKeys.openai;
+                updateAPIStatus('openai', true);
+            }
+            if (apiKeys.google) {
+                document.getElementById('googleKey').value = apiKeys.google;
+                updateAPIStatus('google', true);
+            }
+            
+            // Add event listeners for API key inputs
+            document.getElementById('openaiKey').addEventListener('input', (e) => {
+                apiKeys.openai = e.target.value;
+                localStorage.setItem('xm8_openai_key', e.target.value);
+                updateAPIStatus('openai', e.target.value.length > 0);
+                updateStartButtonState();
+            });
+            
+            document.getElementById('googleKey').addEventListener('input', (e) => {
+                apiKeys.google = e.target.value;
+                localStorage.setItem('xm8_google_key', e.target.value);
+                updateAPIStatus('google', e.target.value.length > 0);
+                updateStartButtonState();
+            });
+            
+            updateStartButtonState();
+        }
+
+        function updateAPIStatus(api, isConfigured) {
+            const statusEl = document.getElementById(`${api}Status`);
+            const statusTextEl = document.getElementById(`${api}StatusText`);
+            
+            if (isConfigured) {
+                statusEl.classList.add('ready');
+                statusTextEl.textContent = 'Configured ✓';
+            } else {
+                statusEl.classList.remove('ready');
+                statusTextEl.textContent = 'Not configured';
+            }
+        }
+
+        function updateStartButtonState() {
+            const startBtn = document.getElementById('startCameraBtn');
+            const statusEl = document.getElementById('status');
+            
+            if (apiKeys.openai && apiKeys.google) {
+                startBtn.disabled = false;
+                statusEl.textContent = '📷 Ready to start camera - Click "Start Camera" button';
+            } else {
+                startBtn.disabled = true;
+                statusEl.textContent = '🔑 Please configure both API keys to continue';
+            }
         }
 
         async function initializeCamera() {
             const statusEl = document.getElementById('status');
             const errorEl = document.getElementById('error');
+            const videoContainer = document.getElementById('videoContainer');
+            const startBtn = document.getElementById('startCameraBtn');
+            const captureBtn = document.getElementById('captureBtn');
             
             try {
                 statusEl.textContent = '📷 Starting camera...';
                 errorEl.style.display = 'none';
                 
-                // Request camera access with better settings
                 const stream = await navigator.mediaDevices.getUserMedia({
                     video: { 
                         facingMode: 'environment',
@@ -308,10 +590,13 @@
                 
                 video.srcObject = stream;
                 video.onloadeddata = () => {
-                    statusEl.textContent = '🤖 Loading AI model...';
-                    // Set canvas size to match video
-                    canvas.width = video.videoWidth;
-                    canvas.height = video.videoHeight;
+                    videoContainer.classList.remove('hidden');
+                    startBtn.classList.add('hidden');
+                    captureBtn.classList.remove('hidden');
+                    statusEl.textContent = '🎯 Position item in the frame and click "Analyze Item"';
+                    
+                    // Make capture frame ready
+                    document.getElementById('captureFrame').classList.add('ready');
                 };
                 
                 return true;
@@ -338,615 +623,435 @@
             }
         }
 
-        async function loadModel() {
-            const statusEl = document.getElementById('status');
-            const errorEl = document.getElementById('error');
-            
-            try {
-                statusEl.innerHTML = '🤖 Loading AI model... <div class="loading"></div>';
-                model = await cocoSsd.load();
-                statusEl.textContent = '📱 Position object in center of frame';
-                console.log('Model loaded successfully');
-            } catch (error) {
-                console.error('Model loading failed:', error);
-                statusEl.textContent = 'AI model failed to load';
-                errorEl.textContent = `Model Error: ${error.message}. Please refresh the page.`;
-                errorEl.style.display = 'block';
-            }
-        }
-
-        async function detectObjects() {
-            if (!model || isCapturing) return;
-            
-            frameCount++;
-            
-            try {
-                const predictions = await model.detect(video);
-                
-                if (predictions && predictions.length > 0) {
-                    // Filter and find the most centered object
-                    const centerX = video.videoWidth / 2;
-                    const centerY = video.videoHeight / 2;
-                    
-                    // Find object closest to center with good confidence
-                    let bestDetection = null;
-                    let minDistance = Infinity;
-                    
-                    for (const prediction of predictions) {
-                        if (prediction.score > DETECTION_CONFIDENCE) {
-                            const [x, y, width, height] = prediction.bbox;
-                            const objCenterX = x + width / 2;
-                            const objCenterY = y + height / 2;
-                            const distance = Math.sqrt(
-                                Math.pow(objCenterX - centerX, 2) + 
-                                Math.pow(objCenterY - centerY, 2)
-                            );
-                            
-                            if (distance < minDistance) {
-                                minDistance = distance;
-                                bestDetection = prediction;
-                            }
-                        }
-                    }
-                    
-                    if (bestDetection) {
-                        // Smooth the detection box if we have a previous one
-                        if (lastStableBox) {
-                            const [newX, newY, newW, newH] = bestDetection.bbox;
-                            const [oldX, oldY, oldW, oldH] = lastStableBox;
-                            
-                            bestDetection.bbox = [
-                                oldX + (newX - oldX) * BOX_SMOOTHING,
-                                oldY + (newY - oldY) * BOX_SMOOTHING,
-                                oldW + (newW - oldW) * BOX_SMOOTHING,
-                                oldH + (newH - oldH) * BOX_SMOOTHING
-                            ];
-                        }
-                        
-                        lastStableBox = bestDetection.bbox;
-                        stableDetections.push(bestDetection);
-                        
-                        // Keep only recent detections
-                        if (stableDetections.length > STABILITY_THRESHOLD) {
-                            stableDetections.shift();
-                        }
-                        
-                        drawPrediction(bestDetection);
-                        updateStatus();
-                    } else {
-                        // No good detection found
-                        stableDetections = [];
-                        lastStableBox = null;
-                        clearCanvas();
-                        document.getElementById('status').textContent = 'Position object in center of frame';
-                        document.getElementById('captureBtn').style.display = 'none';
-                    }
-                } else {
-                    // No predictions
-                    stableDetections = [];
-                    lastStableBox = null;
-                    clearCanvas();
-                    document.getElementById('status').textContent = 'Scanning for objects...';
-                    document.getElementById('captureBtn').style.display = 'none';
-                }
-            } catch (error) {
-                console.error('Detection error:', error);
-                document.getElementById('status').textContent = 'Detection error - retrying...';
-            }
-        }
-
-        function updateStatus() {
-            const statusEl = document.getElementById('status');
-            const captureBtn = document.getElementById('captureBtn');
-            
-            if (stableDetections.length >= STABILITY_THRESHOLD) {
-                statusEl.textContent = '🎯 Object locked - Ready to analyze!';
-                captureBtn.style.display = 'block';
-                captureBtn.style.backgroundColor = '#22c55e';
-            } else if (stableDetections.length > 0) {
-                const progress = Math.round((stableDetections.length / STABILITY_THRESHOLD) * 100);
-                statusEl.textContent = `🔍 Stabilizing... ${progress}%`;
-                captureBtn.style.display = 'none';
-            } else {
-                statusEl.textContent = '📱 Position object in center of frame';
-                captureBtn.style.display = 'none';
-            }
-        }
-
-        function drawPrediction(prediction) {
-            clearCanvas();
-            
-            const [x, y, width, height] = prediction.bbox;
-            const confidence = prediction.score;
-            
-            // Determine stable color based on detection quality
-            let color, status;
-            if (stableDetections.length >= STABILITY_THRESHOLD) {
-                color = '#22c55e'; // Stable green
-                status = 'READY';
-            } else if (stableDetections.length >= STABILITY_THRESHOLD * 0.6) {
-                color = '#eab308'; // Warning yellow  
-                status = 'STABILIZING';
-            } else {
-                color = '#ef4444'; // Needs adjustment red
-                status = 'CENTERING';
-            }
-            
-            ctx.strokeStyle = color;
-            ctx.fillStyle = color + '20'; // Semi-transparent fill
-            ctx.lineWidth = 3;
-            
-            // Draw filled rectangle with border
-            ctx.fillRect(x, y, width, height);
-            ctx.strokeRect(x, y, width, height);
-            
-            // Draw center crosshair
-            const centerX = x + width / 2;
-            const centerY = y + height / 2;
-            const crossSize = 20;
-            
-            ctx.strokeStyle = color;
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(centerX - crossSize, centerY);
-            ctx.lineTo(centerX + crossSize, centerY);
-            ctx.moveTo(centerX, centerY - crossSize);
-            ctx.lineTo(centerX, centerY + crossSize);
-            ctx.stroke();
-            
-            // Draw label with better visibility
-            const label = `${prediction.class} (${Math.round(confidence * 100)}%) - ${status}`;
-            const labelY = y > 40 ? y - 10 : y + height + 25;
-            
-            ctx.fillStyle = color;
-            ctx.fillRect(x, labelY - 20, ctx.measureText(label).width + 10, 25);
-            ctx.fillStyle = 'white';
-            ctx.font = 'bold 14px Arial';
-            ctx.fillText(label, x + 5, labelY - 3);
-        }
-
-        function clearCanvas() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-        }
-
         async function captureAndAnalyze() {
-            if (isCapturing || stableDetections.length < STABILITY_THRESHOLD) {
-                return;
-            }
+            if (isCapturing) return;
             
             isCapturing = true;
             const captureBtn = document.getElementById('captureBtn');
             const statusEl = document.getElementById('status');
             const errorEl = document.getElementById('error');
+            const progressBar = document.getElementById('progressBar');
+            const progressFill = document.getElementById('progressFill');
             
             try {
-                // Hide previous errors
                 errorEl.style.display = 'none';
                 
                 // Update UI
                 captureBtn.textContent = 'Analyzing...';
                 captureBtn.disabled = true;
+                progressBar.classList.remove('hidden');
+                
+                // Capture image
                 statusEl.textContent = '📸 Capturing image...';
+                progressFill.style.width = '10%';
                 
-                // Create canvas for capture
-                const captureCanvas = document.createElement('canvas');
-                const captureCtx = captureCanvas.getContext('2d');
+                const imageData = await captureImage();
                 
-                // Set canvas size to match video
-                captureCanvas.width = video.videoWidth;
-                captureCanvas.height = video.videoHeight;
+                // Start both analyses
+                statusEl.textContent = '🤖 Starting AI analysis...';
+                progressFill.style.width = '25%';
                 
-                // Draw the current video frame
-                captureCtx.drawImage(video, 0, 0);
+                const [gpt4Result, googleResult] = await Promise.allSettled([
+                    analyzeWithGPT4Vision(imageData),
+                    analyzeWithGoogleVision(imageData)
+                ]);
                 
-                // Get image data
-                const imageData = captureCanvas.toDataURL('image/jpeg', 0.8);
+                progressFill.style.width = '90%';
                 
-                // Analyze with vision
-                await analyzeWithVision(imageData);
+                // Combine and display results
+                statusEl.textContent = '📊 Processing results...';
+                const combinedAnalysis = combineAnalysisResults(gpt4Result, googleResult);
                 
-            } catch (error) {
-                console.error('Capture error:', error);
-                statusEl.textContent = 'Capture failed - try again';
-                errorEl.textContent = `Capture Error: ${error.message}`;
-                errorEl.style.display = 'block';
-            } finally {
-                // Reset UI
-                isCapturing = false;
-                captureBtn.textContent = 'Analyze Object';
-                captureBtn.disabled = false;
-                
-                // Only show capture button if still stable
-                if (stableDetections.length >= STABILITY_THRESHOLD) {
-                    captureBtn.style.display = 'block';
-                    statusEl.textContent = '🎯 Object locked - Ready to analyze!';
-                } else {
-                    captureBtn.style.display = 'none';
-                    statusEl.textContent = '📱 Position object in center of frame';
-                }
-            }
-        }
-
-        async function analyzeWithVision(imageData) {
-            const statusEl = document.getElementById('status');
-            const errorEl = document.getElementById('error');
-            
-            try {
-                statusEl.textContent = '🔍 Analyzing with AI...';
-                errorEl.style.display = 'none';
-                
-                // Simulate analysis time
-                await new Promise(resolve => setTimeout(resolve, 1500));
-                
-                // Get the most recent stable detection
-                const lastDetection = stableDetections[stableDetections.length - 1];
-                const analysis = analyzeDetectedObject(lastDetection);
-                
+                progressFill.style.width = '100%';
                 statusEl.textContent = '✅ Analysis complete!';
-                displayResults(analysis);
+                
+                displayResults(combinedAnalysis, gpt4Result, googleResult);
+                
+                setTimeout(() => {
+                    progressBar.classList.add('hidden');
+                    progressFill.style.width = '0%';
+                }, 2000);
                 
             } catch (error) {
                 console.error('Analysis error:', error);
-                statusEl.textContent = 'Ready to capture';
-                
+                statusEl.textContent = 'Analysis failed - try again';
                 errorEl.textContent = `Analysis Error: ${error.message}`;
                 errorEl.style.display = 'block';
-                
-                // Show fallback basic analysis
-                displayBasicAnalysis();
+                progressBar.classList.add('hidden');
+                progressFill.style.width = '0%';
+            } finally {
+                isCapturing = false;
+                captureBtn.textContent = 'Analyze Item';
+                captureBtn.disabled = false;
             }
         }
 
-        function analyzeDetectedObject(detection) {
-            if (!detection) {
-                return {
-                    material: "Unknown Object",
-                    category: "CNT",
-                    removal_code: "CNT PACK",
-                    replacement_code: "CNT MISC",
-                    description: "Personal belonging - manual identification required",
-                    confidence: "Low",
-                    notes: "Object detected but classification uncertain"
-                };
-            }
+        async function captureImage() {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            
+            ctx.drawImage(video, 0, 0);
+            
+            return canvas.toDataURL('image/jpeg', 0.8);
+        }
 
-            const objectClass = detection.class.toLowerCase();
-            const confidence = Math.round(detection.score * 100);
+        async function analyzeWithGPT4Vision(imageData) {
+            const base64Image = imageData.split(',')[1];
             
-            // PHASE 1: Personal Belongings & Household Goods XACTIMATE Mapping
-            const personalBelongingsMap = {
-                // Furniture
-                'chair': {
-                    material: "Chair",
-                    category: "CNT",
-                    removal_code: "CNT PACK", 
-                    replacement_code: "CNT CHAIR",
-                    description: "Residential chair/seating",
-                    avg_value: "$50-200"
+            const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKeys.openai}`
                 },
-                
-                'couch': {
-                    material: "Sofa/Couch",
-                    category: "CNT",
-                    removal_code: "CNT PACK",
-                    replacement_code: "CNT SOFA", 
-                    description: "Living room sofa",
-                    avg_value: "$800-2000"
-                },
-                
-                'bed': {
-                    material: "Bed",
-                    category: "CNT", 
-                    removal_code: "CNT PACK",
-                    replacement_code: "CNT BED",
-                    description: "Bedroom furniture set",
-                    avg_value: "$400-1200"
-                },
-                
-                'dining table': {
-                    material: "Dining Table",
-                    category: "CNT",
-                    removal_code: "CNT PACK",
-                    replacement_code: "CNT TABLE",
-                    description: "Dining room table",
-                    avg_value: "$200-800"
-                },
-                
-                // Electronics & Technology
-                'tv': {
-                    material: "Television", 
-                    category: "CNT",
-                    removal_code: "CNT PACK",
-                    replacement_code: "CNT TV",
-                    description: "Flat screen television",
-                    avg_value: "$300-1500"
-                },
-                
-                'laptop': {
-                    material: "Laptop Computer",
-                    category: "CNT",
-                    removal_code: "CNT PACK", 
-                    replacement_code: "CNT COMP",
-                    description: "Personal computer",
-                    avg_value: "$500-2000"
-                },
-                
-                'cell phone': {
-                    material: "Mobile Phone",
-                    category: "CNT",
-                    removal_code: "CNT PACK",
-                    replacement_code: "CNT PHONE", 
-                    description: "Cellular phone",
-                    avg_value: "$200-1000"
-                },
-                
-                'remote': {
-                    material: "Remote Control",
-                    category: "CNT", 
-                    removal_code: "CNT PACK",
-                    replacement_code: "CNT ELEC",
-                    description: "Electronic remote",
-                    avg_value: "$15-50"
-                },
-                
-                'keyboard': {
-                    material: "Computer Keyboard",
-                    category: "CNT",
-                    removal_code: "CNT PACK",
-                    replacement_code: "CNT COMP",
-                    description: "Computer peripheral",
-                    avg_value: "$25-150"
-                },
-                
-                'mouse': {
-                    material: "Computer Mouse", 
-                    category: "CNT",
-                    removal_code: "CNT PACK",
-                    replacement_code: "CNT COMP",
-                    description: "Computer peripheral",
-                    avg_value: "$15-80"
-                },
-                
-                // Kitchen Appliances (Non-Permanent)
-                'microwave': {
-                    material: "Microwave Oven",
-                    category: "CNT",
-                    removal_code: "CNT PACK",
-                    replacement_code: "CNT MICRO",
-                    description: "Countertop microwave",
-                    avg_value: "$80-300"
-                },
-                
-                'toaster': {
-                    material: "Toaster",
-                    category: "CNT", 
-                    removal_code: "CNT PACK",
-                    replacement_code: "CNT APPL",
-                    description: "Small kitchen appliance",
-                    avg_value: "$25-100"
-                },
-                
-                'refrigerator': {
-                    material: "Refrigerator",
-                    category: "CNT", 
-                    removal_code: "CNT REMOVE",
-                    replacement_code: "CNT REF",
-                    description: "Kitchen refrigerator (if portable)",
-                    avg_value: "$500-2500"
-                },
-                
-                'oven': {
-                    material: "Cooking Range",
-                    category: "CNT",
-                    removal_code: "CNT REMOVE", 
-                    replacement_code: "CNT RANGE",
-                    description: "Cooking appliance (if portable)",
-                    avg_value: "$400-1500"
-                },
-                
-                // Personal Items & Accessories  
-                'book': {
-                    material: "Books",
-                    category: "CNT",
-                    removal_code: "CNT PACK",
-                    replacement_code: "CNT BOOKS",
-                    description: "Personal books/literature", 
-                    avg_value: "$5-50 each"
-                },
-                
-                'clock': {
-                    material: "Clock",
-                    category: "CNT",
-                    removal_code: "CNT PACK",
-                    replacement_code: "CNT DECOR",
-                    description: "Wall or table clock",
-                    avg_value: "$20-200"
-                },
-                
-                'vase': {
-                    material: "Decorative Vase", 
-                    category: "CNT",
-                    removal_code: "CNT PACK",
-                    replacement_code: "CNT DECOR",
-                    description: "Home decor item",
-                    avg_value: "$15-150"
-                },
-                
-                'scissors': {
-                    material: "Scissors",
-                    category: "CNT",
-                    removal_code: "CNT PACK",
-                    replacement_code: "CNT MISC",
-                    description: "Personal tool/supply",
-                    avg_value: "$5-25"
-                },
-                
-                'teddy bear': {
-                    material: "Stuffed Animal",
-                    category: "CNT", 
-                    removal_code: "CNT PACK",
-                    replacement_code: "CNT TOY",
-                    description: "Children's toy",
-                    avg_value: "$10-50"
-                },
-                
-                'hair drier': {
-                    material: "Hair Dryer",
-                    category: "CNT",
-                    removal_code: "CNT PACK", 
-                    replacement_code: "CNT APPL",
-                    description: "Personal care appliance",
-                    avg_value: "$25-150"
-                },
-                
-                'toothbrush': {
-                    material: "Toothbrush",
-                    category: "CNT",
-                    removal_code: "CNT PACK",
-                    replacement_code: "CNT PERS",
-                    description: "Personal hygiene item", 
-                    avg_value: "$2-15"
-                },
-                
-                // Additional common items
-                'bottle': {
-                    material: "Bottle/Container",
-                    category: "CNT",
-                    removal_code: "CNT PACK",
-                    replacement_code: "CNT MISC",
-                    description: "Personal container",
-                    avg_value: "$2-20"
-                },
-                
-                'cup': {
-                    material: "Cup/Mug",
-                    category: "CNT", 
-                    removal_code: "CNT PACK",
-                    replacement_code: "CNT DISH",
-                    description: "Kitchenware",
-                    avg_value: "$5-25"
-                },
-                
-                'bowl': {
-                    material: "Bowl",
-                    category: "CNT",
-                    removal_code: "CNT PACK",
-                    replacement_code: "CNT DISH",
-                    description: "Kitchenware/dinnerware",
-                    avg_value: "$5-30"
-                }
-            };
+                body: JSON.stringify({
+                    model: "gpt-4-vision-preview",
+                    messages: [{
+                        role: "user",
+                        content: [
+                            {
+                                type: "text",
+                                text: "Analyze this item for insurance/restoration purposes. Provide: 1) Item name/type, 2) Brand/model if visible, 3) Material/construction, 4) Condition assessment, 5) Estimated replacement value, 6) Any visible damage, 7) Age/era if determinable. Be specific and detailed for insurance documentation."
+                            },
+                            {
+                                type: "image_url",
+                                image_url: {
+                                    url: imageData
+                                }
+                            }
+                        ]
+                    }],
+                    max_tokens: 500
+                })
+            });
             
-            // Find exact match first
-            let bestMatch = personalBelongingsMap[objectClass];
-            
-            // If no exact match, try partial matching
-            if (!bestMatch) {
-                for (const [key, data] of Object.entries(personalBelongingsMap)) {
-                    if (objectClass.includes(key) || key.includes(objectClass)) {
-                        bestMatch = data;
-                        break;
-                    }
-                }
+            if (!response.ok) {
+                throw new Error(`GPT-4 Vision API Error: ${response.statusText}`);
             }
             
-            // Default fallback for unrecognized personal belongings
-            if (!bestMatch) {
-                bestMatch = {
-                    material: `${detection.class}`,
-                    category: "CNT",
-                    removal_code: "CNT PACK",
-                    replacement_code: "CNT MISC",
-                    description: "Personal belonging - manual valuation needed",
-                    avg_value: "Manual appraisal required"
-                };
-            }
-            
+            const result = await response.json();
             return {
-                ...bestMatch,
-                confidence: `${confidence}% (${confidence > 75 ? 'High' : confidence > 55 ? 'Medium' : 'Low'})`,
-                detected_as: detection.class,
-                classification: "Personal Property/Contents",
-                notes: confidence > 75 ? 
-                    "High confidence - XACTIMATE codes should be accurate" : 
-                    confidence > 55 ?
-                    "Medium confidence - verify replacement value" :
-                    "Low confidence - manual verification recommended"
+                success: true,
+                analysis: result.choices[0].message.content,
+                source: 'GPT-4 Vision'
             };
         }
 
-        function displayBasicAnalysis() {
-            const resultsEl = document.getElementById('results');
-            const basicAnalysis = {
-                material: "Material detected - needs manual verification",
-                category: "RFG",
-                removal_code: "RFG RES",
-                replacement_code: "RFG NEW", 
-                description: "Use manual identification for precise codes",
-                confidence: "Basic Detection",
-                notes: "For accurate XACTIMATE codes, improve lighting and try again"
-            };
+        async function analyzeWithGoogleVision(imageData) {
+            const base64Image = imageData.split(',')[1];
             
-            displayResults(basicAnalysis);
+            const response = await fetch(`https://vision.googleapis.com/v1/images:annotate?key=${apiKeys.google}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    requests: [{
+                        image: {
+                            content: base64Image
+                        },
+                        features: [
+                            { type: 'LABEL_DETECTION', maxResults: 10 },
+                            { type: 'TEXT_DETECTION', maxResults: 5 },
+                            { type: 'OBJECT_LOCALIZATION', maxResults: 5 }
+                        ]
+                    }]
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Google Vision API Error: ${response.statusText}`);
+            }
+            
+            const result = await response.json();
+            return {
+                success: true,
+                analysis: result.responses[0],
+                source: 'Google Vision'
+            };
         }
 
-        function displayResults(analysis) {
-            const resultsContainer = document.getElementById('results');
-            const resultsContent = document.getElementById('resultsContent');
+        function combineAnalysisResults(gpt4Result, googleResult) {
+            let combined = {
+                item_type: 'Unknown Item',
+                brand_model: 'Not detected',
+                material: 'Unknown',
+                condition: 'Assessment needed',
+                estimated_value: 'Manual appraisal required',
+                confidence: 'Mixed results',
+                xactimate_category: 'CNT',
+                removal_code: 'CNT PACK',
+                replacement_code: 'CNT MISC'
+            };
+
+            // Process GPT-4 results
+            if (gpt4Result.status === 'fulfilled' && gpt4Result.value.success) {
+                const gpt4Analysis = gpt4Result.value.analysis;
+                combined = parseGPT4Analysis(gpt4Analysis);
+                combined.confidence = 'High (GPT-4 Analysis)';
+            }
+
+            // Enhance with Google Vision data
+            if (googleResult.status === 'fulfilled' && googleResult.value.success) {
+                const googleData = googleResult.value.analysis;
+                
+                // Extract text/serial numbers
+                if (googleData.textAnnotations && googleData.textAnnotations.length > 0) {
+                    combined.detected_text = googleData.textAnnotations[0].description.replace(/\n/g, ' ');
+                }
+                
+                // Extract labels for additional context
+                if (googleData.labelAnnotations) {
+                    combined.detected_labels = googleData.labelAnnotations
+                        .slice(0, 5)
+                        .map(label => `${label.description} (${Math.round(label.score * 100)}%)`)
+                        .join(', ');
+                }
+            }
+
+            // Generate XACTIMATE codes based on combined analysis
+            combined = generateXACTIMATECodes(combined);
+
+            return combined;
+        }
+
+        function parseGPT4Analysis(analysis) {
+            // Extract key information from GPT-4's natural language response
+            const lines = analysis.toLowerCase();
             
-            if (!analysis) return;
+            let result = {
+                item_type: 'Item detected',
+                brand_model: 'Not specified',
+                material: 'Various materials',
+                condition: 'Good condition assumed',
+                estimated_value: '$50-200',
+                damage: 'None visible'
+            };
+
+            // Try to extract specific information
+            if (lines.includes('chair') || lines.includes('seat')) {
+                result.item_type = 'Chair';
+                result.xactimate_category = 'CNT';
+            } else if (lines.includes('table')) {
+                result.item_type = 'Table';
+                result.xactimate_category = 'CNT';
+            } else if (lines.includes('television') || lines.includes('tv')) {
+                result.item_type = 'Television';
+                result.xactimate_category = 'CNT';
+            } else if (lines.includes('refrigerator') || lines.includes('fridge')) {
+                result.item_type = 'Refrigerator';
+                result.xactimate_category = 'CNT';
+            }
+
+            // Extract value estimates
+            const valueMatch = analysis.match(/\$[\d,]+(?:\.\d{2})?(?:\s*-\s*\$[\d,]+(?:\.\d{2})?)?/);
+            if (valueMatch) {
+                result.estimated_value = valueMatch[0];
+            }
+
+            result.full_analysis = analysis;
             
-            // Parse the analysis if it's a string
-            let data = analysis;
-            if (typeof analysis === 'string') {
-                try {
-                    data = JSON.parse(analysis);
-                } catch (e) {
-                    // If not JSON, create basic structure
-                    data = {
-                        material: analysis,
-                        category: "Unknown",
-                        removal_code: "Manual lookup needed",
-                        replacement_code: "Manual lookup needed"
-                    };
+            return result;
+        }
+
+        function generateXACTIMATECodes(analysis) {
+            const itemType = analysis.item_type.toLowerCase();
+            
+            // Comprehensive XACTIMATE mapping for personal property
+            const xactimateMap = {
+                'chair': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT CHAIR' },
+                'table': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT TABLE' },
+                'sofa': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT SOFA' },
+                'couch': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT SOFA' },
+                'bed': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT BED' },
+                'television': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT TV' },
+                'tv': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT TV' },
+                'refrigerator': { cat: 'CNT', remove: 'CNT REMOVE', replace: 'CNT REF' },
+                'microwave': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT MICRO' },
+                'laptop': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT COMP' },
+                'computer': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT COMP' },
+                'book': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT BOOKS' },
+                'clock': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT DECOR' },
+                'lamp': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT LIGHT' },
+                'appliance': { cat: 'CNT', remove: 'CNT PACK', replace: 'CNT APPL' }
+            };
+            
+            for (const [key, codes] of Object.entries(xactimateMap)) {
+                if (itemType.includes(key)) {
+                    analysis.xactimate_category = codes.cat;
+                    analysis.removal_code = codes.remove;
+                    analysis.replacement_code = codes.replace;
+                    break;
                 }
             }
             
-            // Create results HTML
-            let resultsHTML = '';
+            // Default fallback
+            if (!analysis.xactimate_category) {
+                analysis.xactimate_category = 'CNT';
+                analysis.removal_code = 'CNT PACK';
+                analysis.replacement_code = 'CNT MISC';
+            }
             
-            const fields = [
-                { key: 'material', label: 'Item Type' },
-                { key: 'classification', label: 'Classification' },
-                { key: 'category', label: 'XACTIMATE Category' },
-                { key: 'removal_code', label: 'Packing/Removal Code' },
-                { key: 'replacement_code', label: 'Replacement Code' },
-                { key: 'avg_value', label: 'Typical Value Range' },
-                { key: 'description', label: 'Description' },
-                { key: 'confidence', label: 'Detection Confidence' },
-                { key: 'detected_as', label: 'AI Detected As' },
-                { key: 'notes', label: 'Notes' }
-            ];
+            return analysis;
+        }
+
+        function displayResults(combined, gpt4Result, googleResult) {
+            // Show results container
+            document.getElementById('results').style.display = 'block';
             
-            for (const field of fields) {
-                if (data[field.key]) {
-                    resultsHTML += `
+            // Display summary
+            displayAnalysisSummary(combined);
+            
+            // Display combined results
+            displayCombinedResults(combined);
+            
+            // Display GPT-4 results
+            displayGPT4Results(gpt4Result);
+            
+            // Display Google results
+            displayGoogleResults(googleResult);
+            
+            // Display XACTIMATE codes
+            displayXACTIMATEResults(combined);
+            
+            // Scroll to results
+            document.getElementById('results').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function displayAnalysisSummary(combined) {
+            const summaryEl = document.getElementById('analysisSummary');
+            summaryEl.innerHTML = `
+                <div class="summary-title">${combined.item_type}</div>
+                <div style="margin-bottom: 10px;"><strong>Estimated Value:</strong> ${combined.estimated_value}</div>
+                <div style="margin-bottom: 10px;"><strong>XACTIMATE Category:</strong> ${combined.xactimate_category}</div>
+                <div><strong>Replacement Code:</strong> ${combined.replacement_code}</div>
+            `;
+        }
+
+        function displayCombinedResults(combined) {
+            const resultsEl = document.getElementById('combinedResults');
+            resultsEl.innerHTML = createResultItems([
+                { key: 'item_type', label: 'Item Type', value: combined.item_type },
+                { key: 'brand_model', label: 'Brand/Model', value: combined.brand_model },
+                { key: 'material', label: 'Material', value: combined.material },
+                { key: 'condition', label: 'Condition', value: combined.condition },
+                { key: 'estimated_value', label: 'Estimated Value', value: combined.estimated_value },
+                { key: 'detected_text', label: 'Detected Text/Serial', value: combined.detected_text || 'None detected' },
+                { key: 'detected_labels', label: 'AI Labels', value: combined.detected_labels || 'None detected' },
+                { key: 'confidence', label: 'Analysis Confidence', value: combined.confidence }
+            ]);
+        }
+
+        function displayGPT4Results(gpt4Result) {
+            const resultsEl = document.getElementById('gpt4Results');
+            if (gpt4Result.status === 'fulfilled' && gpt4Result.value.success) {
+                resultsEl.innerHTML = `
+                    <div class="result-item">
+                        <label>GPT-4 Vision Analysis:</label>
+                        <div class="value">${gpt4Result.value.analysis}</div>
+                    </div>
+                `;
+            } else {
+                resultsEl.innerHTML = `
+                    <div class="result-item">
+                        <label>Error:</label>
+                        <div class="value">GPT-4 Vision analysis failed: ${gpt4Result.reason?.message || 'Unknown error'}</div>
+                    </div>
+                `;
+            }
+        }
+
+        function displayGoogleResults(googleResult) {
+            const resultsEl = document.getElementById('googleResults');
+            if (googleResult.status === 'fulfilled' && googleResult.value.success) {
+                const data = googleResult.value.analysis;
+                let html = '';
+                
+                if (data.labelAnnotations) {
+                    html += `
                         <div class="result-item">
-                            <label>${field.label}:</label>
-                            <value>${data[field.key]}</value>
+                            <label>Detected Labels:</label>
+                            <div class="value">
+                                ${data.labelAnnotations.map(label => 
+                                    `${label.description} (${Math.round(label.score * 100)}%)`
+                                ).join('<br>')}
+                            </div>
                         </div>
                     `;
                 }
+                
+                if (data.textAnnotations && data.textAnnotations.length > 0) {
+                    html += `
+                        <div class="result-item">
+                            <label>Detected Text:</label>
+                            <div class="value">${data.textAnnotations[0].description}</div>
+                        </div>
+                    `;
+                }
+                
+                if (data.localizedObjectAnnotations) {
+                    html += `
+                        <div class="result-item">
+                            <label>Detected Objects:</label>
+                            <div class="value">
+                                ${data.localizedObjectAnnotations.map(obj => 
+                                    `${obj.name} (${Math.round(obj.score * 100)}%)`
+                                ).join('<br>')}
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                resultsEl.innerHTML = html || '<div class="result-item"><label>No data detected</label></div>';
+            } else {
+                resultsEl.innerHTML = `
+                    <div class="result-item">
+                        <label>Error:</label>
+                        <div class="value">Google Vision analysis failed: ${googleResult.reason?.message || 'Unknown error'}</div>
+                    </div>
+                `;
             }
-            
-            resultsContent.innerHTML = resultsHTML;
-            resultsContainer.style.display = 'block';
-            
-            // Scroll to results
-            resultsContainer.scrollIntoView({ behavior: 'smooth' });
         }
 
-        // Start the app when page loads
+        function displayXACTIMATEResults(combined) {
+            const resultsEl = document.getElementById('xactimateResults');
+            resultsEl.innerHTML = createResultItems([
+                { key: 'xactimate_category', label: 'XACTIMATE Category', value: combined.xactimate_category },
+                { key: 'removal_code', label: 'Packing/Removal Code', value: combined.removal_code },
+                { key: 'replacement_code', label: 'Replacement Code', value: combined.replacement_code },
+                { key: 'item_type', label: 'Item Description', value: combined.item_type },
+                { key: 'estimated_value', label: 'Estimated Replacement Value', value: combined.estimated_value },
+                { key: 'notes', label: 'Notes', value: 'Professional AI analysis - verify high-value items manually' }
+            ]);
+        }
+
+        function createResultItems(items) {
+            return items.map(item => `
+                <div class="result-item">
+                    <label>${item.label}:</label>
+                    <div class="value">${item.value}</div>
+                </div>
+            `).join('');
+        }
+
+        function showTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Show selected tab
+            document.getElementById(`${tabName}Tab`).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // Initialize the app when page loads
         window.addEventListener('load', init);
     </script>
 </body>
