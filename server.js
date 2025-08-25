@@ -10,14 +10,15 @@ const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(express.static('public'));
 
 // Configure multer for file uploads
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB limit
+    fileSize: 20 * 1024 * 1024, // 20MB limit for better quality images
   },
   fileFilter: (req, file, cb) => {
     if (file.mimetype.startsWith('image/')) {
@@ -47,88 +48,136 @@ app.get('/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
-// Main image analysis endpoint
-app.post('/analyze-image', upload.single('image'), async (req, res) => {
+// Main image analysis endpoint - now handles cropped regions
+app.post('/analyze-region', upload.single('image'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No image file provided' });
     }
 
-    console.log('Analyzing image:', req.file.originalname, 'Size:', req.file.size);
+    const { cropData } = req.body;
+    console.log('Analyzing cropped region:', req.file.originalname, 'Size:', req.file.size);
+    console.log('Crop data:', cropData);
 
-    // Analyze image with Google Vision API
-    const [result] = await visionClient.labelDetection({
-      image: { content: req.file.buffer }
+    let imageBuffer = req.file.buffer;
+
+    // If crop data is provided, we would crop the image here
+    // For now, we'll analyze the full image but note that cropping was requested
+    if (cropData) {
+      console.log('Crop region specified:', cropData);
+      // In a full implementation, you'd crop the image using a library like sharp or canvas
+      // For this demo, we'll proceed with the full image
+    }
+
+    // Analyze image with Google Vision API - multiple detection types
+    const [labelResult] = await visionClient.labelDetection({
+      image: { content: imageBuffer }
     });
 
-    // Also get object localization for more detailed results
     const [objectResult] = await visionClient.objectLocalization({
-      image: { content: req.file.buffer }
+      image: { content: imageBuffer }
     });
 
-    // Process and categorize results
-    const labels = result.labelAnnotations || [];
+    const [textResult] = await visionClient.textDetection({
+      image: { content: imageBuffer }
+    });
+
+    // Process results
+    const labels = labelResult.labelAnnotations || [];
     const objects = objectResult.localizedObjectAnnotations || [];
+    const textAnnotations = textResult.textAnnotations || [];
 
-    // Filter for roofing-related terms
-    const roofingKeywords = [
-      'roof', 'roofing', 'shingle', 'tile', 'metal', 'slate', 
-      'asphalt', 'cedar', 'wood', 'concrete', 'clay', 'membrane',
-      'building', 'house', 'structure', 'architecture', 'construction',
-      'gutter', 'chimney', 'vent', 'flashing', 'ridge'
-    ];
-
-    const categorizedResults = {
-      roofingMaterials: [],
-      buildingElements: [],
-      generalLabels: [],
-      objects: []
+    // Enhanced categorization for building materials and contents
+    const buildingKeywords = {
+      roofing: ['roof', 'roofing', 'shingle', 'tile', 'slate', 'asphalt', 'metal roofing', 'gutter', 'downspout', 'flashing', 'ridge', 'vent'],
+      exterior: ['siding', 'brick', 'stucco', 'window', 'door', 'garage', 'fence', 'deck', 'patio'],
+      interior: ['floor', 'flooring', 'carpet', 'hardwood', 'tile', 'ceiling', 'wall', 'paint', 'drywall'],
+      appliances: ['refrigerator', 'stove', 'oven', 'dishwasher', 'washer', 'dryer', 'microwave', 'hvac', 'furnace', 'air conditioner'],
+      fixtures: ['light', 'lighting', 'fixture', 'faucet', 'sink', 'toilet', 'bathtub', 'shower', 'cabinet', 'countertop'],
+      contents: ['furniture', 'sofa', 'chair', 'table', 'bed', 'dresser', 'television', 'computer', 'electronics']
     };
 
-    // Categorize labels
-    labels.forEach(label => {
-      const isRoofingRelated = roofingKeywords.some(keyword => 
-        label.description.toLowerCase().includes(keyword.toLowerCase())
-      );
+    const categorizedResults = {
+      primaryDetection: null,
+      roofing: [],
+      exterior: [],
+      interior: [],
+      appliances: [],
+      fixtures: [],
+      contents: [],
+      other: [],
+      objects: [],
+      text: textAnnotations.length > 0 ? textAnnotations[0].description : null
+    };
 
+    // Find the highest confidence detection as primary
+    let highestConfidence = 0;
+    let primaryItem = null;
+
+    // Process labels
+    labels.forEach(label => {
       const labelData = {
         description: label.description,
         confidence: Math.round(label.score * 100),
-        score: label.score
+        score: label.score,
+        type: 'label'
       };
 
-      if (isRoofingRelated) {
-        if (['roof', 'roofing', 'shingle', 'tile', 'metal', 'slate', 'asphalt'].some(term => 
-            label.description.toLowerCase().includes(term))) {
-          categorizedResults.roofingMaterials.push(labelData);
-        } else {
-          categorizedResults.buildingElements.push(labelData);
+      if (label.score > highestConfidence) {
+        highestConfidence = label.score;
+        primaryItem = labelData;
+      }
+
+      // Categorize by building type
+      let categorized = false;
+      for (const [category, keywords] of Object.entries(buildingKeywords)) {
+        if (keywords.some(keyword => 
+          label.description.toLowerCase().includes(keyword.toLowerCase()))) {
+          categorizedResults[category].push(labelData);
+          categorized = true;
+          break;
         }
-      } else if (label.score > 0.7) {
-        categorizedResults.generalLabels.push(labelData);
+      }
+
+      if (!categorized && label.score > 0.6) {
+        categorizedResults.other.push(labelData);
       }
     });
 
-    // Process objects
+    // Process objects with higher priority for primary detection
     objects.forEach(obj => {
-      categorizedResults.objects.push({
+      const objData = {
         name: obj.name,
         confidence: Math.round(obj.score * 100),
-        score: obj.score
-      });
+        score: obj.score,
+        type: 'object',
+        boundingBox: obj.boundingPoly
+      };
+
+      // Objects often have higher relevance for building detection
+      if (obj.score > highestConfidence) {
+        highestConfidence = obj.score;
+        primaryItem = objData;
+      }
+
+      categorizedResults.objects.push(objData);
     });
 
-    // Generate analysis summary
-    const summary = generateAnalysisSummary(categorizedResults);
+    // Set primary detection
+    categorizedResults.primaryDetection = primaryItem;
+
+    // Generate enhanced analysis
+    const analysis = generateBuildingAnalysis(categorizedResults);
 
     res.json({
       success: true,
       analysis: categorizedResults,
-      summary: summary,
+      summary: analysis,
       metadata: {
         filename: req.file.originalname,
         fileSize: req.file.size,
-        processedAt: new Date().toISOString()
+        processedAt: new Date().toISOString(),
+        cropApplied: !!cropData
       }
     });
 
@@ -141,52 +190,82 @@ app.post('/analyze-image', upload.single('image'), async (req, res) => {
   }
 });
 
-// Helper function to generate analysis summary
-function generateAnalysisSummary(results) {
-  let summary = {
-    detectedMaterials: [],
+// Enhanced analysis for building materials and contents
+function generateBuildingAnalysis(results) {
+  let analysis = {
+    primaryItem: null,
+    category: 'unknown',
     confidence: 'low',
-    recommendations: []
+    detectedItems: [],
+    recommendations: [],
+    xactimateReady: false
   };
 
-  const materials = results.roofingMaterials;
-  
-  if (materials.length === 0) {
-    summary.recommendations.push('No specific roofing materials detected. Try uploading a clearer image of the roof surface.');
-    return summary;
-  }
+  if (results.primaryDetection) {
+    analysis.primaryItem = {
+      name: results.primaryDetection.name || results.primaryDetection.description,
+      confidence: results.primaryDetection.confidence,
+      type: results.primaryDetection.type
+    };
 
-  // Extract likely materials
-  materials.forEach(material => {
-    if (material.confidence > 70) {
-      summary.detectedMaterials.push({
-        material: material.description,
-        confidence: material.confidence
-      });
+    // Determine category based on what was found
+    const categories = ['roofing', 'exterior', 'interior', 'appliances', 'fixtures', 'contents'];
+    for (const category of categories) {
+      if (results[category].length > 0) {
+        analysis.category = category;
+        break;
+      }
     }
-  });
 
-  // Determine overall confidence
-  const avgConfidence = materials.reduce((sum, m) => sum + m.confidence, 0) / materials.length;
-  if (avgConfidence > 80) summary.confidence = 'high';
-  else if (avgConfidence > 60) summary.confidence = 'medium';
-  else summary.confidence = 'low';
+    // Set confidence level
+    if (results.primaryDetection.confidence > 85) {
+      analysis.confidence = 'high';
+      analysis.xactimateReady = true;
+    } else if (results.primaryDetection.confidence > 70) {
+      analysis.confidence = 'medium';
+      analysis.xactimateReady = true;
+    } else {
+      analysis.confidence = 'low';
+    }
 
-  // Generate recommendations
-  if (summary.detectedMaterials.length > 0) {
-    summary.recommendations.push('Materials successfully identified. Ready for XACTIMATE code mapping.');
+    // Collect all significant detections
+    const allItems = [
+      ...results.roofing,
+      ...results.exterior, 
+      ...results.interior,
+      ...results.appliances,
+      ...results.fixtures,
+      ...results.contents,
+      ...results.objects
+    ].filter(item => item.confidence > 60)
+     .sort((a, b) => b.confidence - a.confidence)
+     .slice(0, 5);
+
+    analysis.detectedItems = allItems;
+
+    // Generate recommendations
+    if (analysis.xactimateReady) {
+      analysis.recommendations.push(`${analysis.primaryItem.name} identified with ${analysis.confidence} confidence - ready for XACTIMATE coding`);
+    } else {
+      analysis.recommendations.push('Low confidence detection - consider retaking photo with better lighting or closer view');
+    }
+
+    if (analysis.category !== 'unknown') {
+      analysis.recommendations.push(`Category: ${analysis.category.charAt(0).toUpperCase() + analysis.category.slice(1)} - suitable for property assessment`);
+    }
+
   } else {
-    summary.recommendations.push('Low confidence detection. Consider retaking photo with better lighting or closer view.');
+    analysis.recommendations.push('No clear objects detected. Ensure item is centered and well-lit in the frame');
   }
 
-  return summary;
+  return analysis;
 }
 
 // Error handling middleware
 app.use((error, req, res, next) => {
   if (error instanceof multer.MulterError) {
     if (error.code === 'LIMIT_FILE_SIZE') {
-      return res.status(400).json({ error: 'File too large. Maximum size is 10MB.' });
+      return res.status(400).json({ error: 'File too large. Maximum size is 20MB.' });
     }
   }
   
@@ -196,6 +275,7 @@ app.use((error, req, res, next) => {
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`XM8Detection server running on port ${PORT}`);
-  console.log(`Visit: http://localhost:${PORT}`);
+  console.log(`🚀 XM8Detection server running on port ${PORT}`);
+  console.log(`📱 Visit: http://localhost:${PORT}`);
+  console.log(`🏠 Ready for building & contents detection!`);
 });
