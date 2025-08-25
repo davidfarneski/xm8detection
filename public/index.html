@@ -619,8 +619,8 @@
         let detectionInterval = null;
         let currentDetections = [];
         
-        // Performance tracking
-        let detectionStats = {
+        // Performance tracking (renamed to avoid conflict)
+        let statsTracker = {
             objectCount: 0,
             averageConfidence: 0,
             detectionTime: 0
@@ -804,9 +804,9 @@
             const avgConfidence = objectCount > 0 ? 
                 Math.round(predictions.reduce((sum, p) => sum + p.score, 0) / objectCount * 100) : 0;
                 
-            detectionStats.objectCount = objectCount;
-            detectionStats.averageConfidence = avgConfidence;
-            detectionStats.detectionTime = detectionTime;
+            statsTracker.objectCount = objectCount;
+            statsTracker.averageConfidence = avgConfidence;
+            statsTracker.detectionTime = detectionTime;
             
             // Update UI
             document.getElementById('objectCount').textContent = objectCount;
